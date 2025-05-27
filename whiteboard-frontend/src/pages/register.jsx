@@ -1,4 +1,3 @@
-// src/Register.jsx
 import { useState, useContext } from "react";
 import { AuthContext } from "./AuthContext";
 import { Box, Button, TextField, Typography } from "@mui/material";

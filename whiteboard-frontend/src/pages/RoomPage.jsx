@@ -1,6 +1,6 @@
 // src/RoomPage.jsx
 import { useParams } from "react-router-dom";
-import { useContext } from "react";
+import { useContext, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { AuthContext } from "./AuthContext";
 import {
@@ -19,17 +19,25 @@ import Brightness7Icon from "@mui/icons-material/Brightness7";
 import CanvasWhiteboard from "./canvas";
 import UserList from "./userList";
 import VideoChat from "./VideoChat";
+import ChatPanel from "../components/ChatPanel";
 import { ThemeContext } from "../components/themeCtx";
 
 export default function RoomPage() {
     const { roomId } = useParams();
     const { token, user, logout } = useContext(AuthContext);
     const { mode, toggleMode } = useContext(ThemeContext);
+    const [users, setUsers] = useState([]);
+    const [remoteStreams, setRemoteStreams] = useState({});
+
     const navigate = useNavigate();
 
     const handleLogout = () => {
         logout();
         navigate("/login");
+    };
+
+    const handleRemoteStream = (peerUsername, stream) => {
+        setRemoteStreams((prev) => ({ ...prev, [peerUsername]: stream }));
     };
 
     return (
@@ -58,11 +66,22 @@ export default function RoomPage() {
             </AppBar>
             <Container maxWidth="lg" sx={{ mt: 4 }}>
                 <Grid container spacing={2}>
-                    <Grid item size={{ xs: 12, md: 3 }} >
-                        <UserList roomId={roomId} username={user.username} />
-                        <VideoChat roomId={roomId} username={user.username} />
+                    <Grid size={{ xs: 12, md: 3 }} >
+                        <UserList
+                            roomId={roomId}
+                            username={user.username}
+                            remoteStreams={remoteStreams}
+                            onUserListUpdate={setUsers} />
+                        <VideoChat
+                            roomId={roomId}
+                            username={user.username}
+                            onRemoteStream={handleRemoteStream}
+                        />
+                        <ChatPanel
+                            roomId={roomId}
+                            username={user.username} />
                     </Grid>
-                    <Grid item size={{ xs: 12, md: 9 }}>
+                    <Grid size={{ xs: 12, md: 9 }}>
                         <CanvasWhiteboard
                             roomId={roomId}
                             username={user.username}

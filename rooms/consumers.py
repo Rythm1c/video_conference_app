@@ -72,6 +72,16 @@ class RoomConsumer(AsyncWebsocketConsumer):
                     "size": data.get("size", 4),
                 },
             )
+        elif msg_type == "chat":
+            # broadcast chat message
+            await self.channel_layer.group_send(
+                self.group_name,
+                {
+                    "type": "chat_message",
+                    "username": data["username"],
+                    "text": data["text"],
+                },
+            )
 
         elif msg_type in ("webrtc_offer", "webrtc_answer", "webrtc_candidate"):
             # Relay WebRTC signaling messages
@@ -111,6 +121,17 @@ class RoomConsumer(AsyncWebsocketConsumer):
                     "y": event["y"],
                     "color": event["color"],
                     "size": event["size"],
+                }
+            )
+        )
+
+    async def chat_message(self, event):
+        await self.send(
+            text_data=json.dumps(
+                {
+                    "type": "chat",
+                    "username": event["username"],
+                    "text": event["text"],
                 }
             )
         )

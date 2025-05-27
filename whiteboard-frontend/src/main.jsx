@@ -6,6 +6,8 @@ import RoomPage from "./pages/RoomPage.jsx";
 import { AuthProvider, AuthContext } from "./pages/AuthContext.jsx";
 import Login from "./pages/login.jsx";
 import Register from "./pages/register.jsx";
+import ListRooms from "./pages/ListRooms.jsx";
+import CreateRoom from "./forms/CreateRoom.jsx";
 import { ThemeProvider } from "./components/themeCtx.jsx";
 import "./index.css";
 
@@ -32,6 +34,16 @@ ReactDOM.createRoot(document.getElementById("root")).render(
               }
             />
             <Route path="*" element={<Navigate to="/" replace />} />
+            <Route path="/rooms" element={
+              <RequireAuth>
+                <ListRooms />
+              </RequireAuth>
+            } />
+            <Route path="/create-room" element={
+              <RequireAuth>
+                <CreateRoom />
+              </RequireAuth>
+            } />
           </Routes>
         </AuthProvider>
       </ThemeProvider>

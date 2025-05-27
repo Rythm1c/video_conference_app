@@ -1,27 +1,31 @@
-import { useEffect, useRef, useState } from "react";
+// src/VideoChat.jsx
+import { useEffect, useRef } from "react";
 import { Box, Button, Stack } from "@mui/material";
 
-export default function VideoChat({ roomId, username }) {
+export default function VideoChat({ roomId, username, onRemoteStream }) {
     const localVid = useRef();
     const remoteVid = useRef();
     const pc = useRef();
     const ws = useRef();
+    const lastSignalSender = useRef(null);  // track who sent the last offer/answer/candidate
 
     useEffect(() => {
+        // 1) Open WebSocket for signaling
         ws.current = new WebSocket(`ws://localhost:8000/ws/room/${roomId}/`);
         ws.current.onmessage = async (e) => {
             const msg = JSON.parse(e.data);
             const { type, payload, sender } = msg;
 
+            // Remember who sent this, so we know whose stream is incoming
+            if (type.startsWith("webrtc_")) lastSignalSender.current = sender;
+
             if (type === "webrtc_offer" && sender !== username) {
                 await pc.current.setRemoteDescription(new RTCSessionDescription(payload));
                 const answer = await pc.current.createAnswer();
                 await pc.current.setLocalDescription(answer);
-                ws.current.send(JSON.stringify({
-                    type: "webrtc_answer",
-                    payload: answer,
-                    sender: username
-                }));
+                ws.current.send(
+                    JSON.stringify({ type: "webrtc_answer", payload: answer, sender: username })
+                );
             }
 
             if (type === "webrtc_answer" && sender !== username) {
@@ -31,47 +35,57 @@ export default function VideoChat({ roomId, username }) {
             if (type === "webrtc_candidate" && sender !== username) {
                 try {
                     await pc.current.addIceCandidate(new RTCIceCandidate(payload));
-                } catch (e) { console.error(e); }
+                } catch (err) {
+                    console.error(err);
+                }
             }
 
+            // Auto-start on second join
             if (type === "start_call" && !pc.current.localDescription) {
-                // first time you’re told to start
                 const offer = await pc.current.createOffer();
                 await pc.current.setLocalDescription(offer);
-                ws.current.send(JSON.stringify({
-                    type: "webrtc_offer",
-                    payload: offer,
-                    sender: username,
-                }));
+                ws.current.send(
+                    JSON.stringify({ type: "webrtc_offer", payload: offer, sender: username })
+                );
             }
         };
 
-        // Setup RTCPeerConnection
+        // 2) Set up RTCPeerConnection
         pc.current = new RTCPeerConnection({
-            iceServers: [{ urls: "stun:stun.l.google.com:19302" }]
+            iceServers: [{ urls: "stun:stun.l.google.com:19302" }],
         });
 
         pc.current.onicecandidate = (e) => {
             if (e.candidate) {
-                ws.current.send(JSON.stringify({
-                    type: "webrtc_candidate",
-                    payload: e.candidate,
-                    sender: username
-                }));
+                ws.current.send(
+                    JSON.stringify({
+                        type: "webrtc_candidate",
+                        payload: e.candidate,
+                        sender: username,
+                    })
+                );
             }
         };
 
+        // 3) When a remote track arrives, use lastSignalSender to identify whose it is
         pc.current.ontrack = (e) => {
-            if (remoteVid.current.srcObject !== e.streams[0]) {
-                remoteVid.current.srcObject = e.streams[0];
+            const stream = e.streams[0];
+            const peer = lastSignalSender.current;
+            if (peer && peer !== username) {
+                onRemoteStream(peer, stream);
+            }
+            // also attach to the small local preview <video>
+            if (remoteVid.current && !remoteVid.current.srcObject) {
+                remoteVid.current.srcObject = stream;
             }
         };
 
-        // Get local media
-        navigator.mediaDevices.getUserMedia({ video: true, audio: true })
+        // 4) Get local media and add to peer
+        navigator.mediaDevices
+            .getUserMedia({ video: true, audio: true })
             .then((stream) => {
                 localVid.current.srcObject = stream;
-                stream.getTracks().forEach(track => pc.current.addTrack(track, stream));
+                stream.getTracks().forEach((track) => pc.current.addTrack(track, stream));
             })
             .catch(console.error);
 
@@ -79,29 +93,38 @@ export default function VideoChat({ roomId, username }) {
             pc.current.close();
             ws.current.close();
         };
-    }, [roomId, username]);
-
-    // Only the first user to click this will create the offer
-    const startCall = async () => {
-        const offer = await pc.current.createOffer();
-        await pc.current.setLocalDescription(offer);
-        ws.current.send(JSON.stringify({
-            type: "webrtc_offer",
-            payload: offer,
-            sender: username
-        }));
-    };
+    }, [roomId, username, onRemoteStream]);
 
     return (
-        <Box>
-            <Stack direction="row" spacing={2} mb={2}>
-                <Button variant="contained" onClick={startCall}>
-                    Start Call
-                </Button>
-            </Stack>
-            <Stack direction="row" spacing={2}>
-                <video ref={localVid} autoPlay muted style={{ width: 200, borderRadius: 8 }} />
-                <video ref={remoteVid} autoPlay style={{ width: 200, borderRadius: 8 }} />
+        <Box sx={{ mb: 2 }}>
+            <Button
+                variant="contained"
+                onClick={() => {
+                    if (!pc.current.localDescription) {
+                        pc.current.createOffer().then((offer) => {
+                            pc.current.setLocalDescription(offer);
+                            ws.current.send(
+                                JSON.stringify({ type: "webrtc_offer", payload: offer, sender: username })
+                            );
+                        });
+                    }
+                }}
+                sx={{ mb: 1 }}
+            >
+                Start Call
+            </Button>
+            <Stack direction="row" spacing={1}>
+                <video
+                    ref={localVid}
+                    autoPlay
+                    muted
+                    style={{ width: 100, borderRadius: 4 }}
+                />
+                <video
+                    ref={remoteVid}
+                    autoPlay
+                    style={{ width: 100, borderRadius: 4 }}
+                />
             </Stack>
         </Box>
     );

@@ -1,7 +1,7 @@
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
-from rest_framework.generics import RetrieveAPIView, UpdateAPIView
+from rest_framework.generics import RetrieveAPIView, UpdateAPIView, ListAPIView
 from rest_framework import status
 from .models import Room, CanvasState
 from .serializers import RoomSerializer, CanvasStateSerializer
@@ -16,6 +16,12 @@ class CreateRoomView(APIView):
             room = serializer.save(created_by=request.user)
             return Response(RoomSerializer(room).data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+class ListPublicRoomsView(ListAPIView):
+    queryset = Room.objects.filter(is_private=False).order_by("-created_at")
+    serializer_class = RoomSerializer
+    permission_classes = [IsAuthenticated]
 
 
 class CanvasStateView(RetrieveAPIView, UpdateAPIView):

@@ -5,7 +5,7 @@ from .models import Room, CanvasState
 class RoomSerializer(serializers.ModelSerializer):
     class Meta:
         model = Room
-        fields = ["code", "name", "created_by", "created_at"]
+        fields = ["code", "name", "is_private", "created_by", "created_at"]
         read_only_fields = ["code", "created_by", "created_at"]
 
 

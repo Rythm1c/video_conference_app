@@ -28,6 +28,10 @@ class RoomConsumer(AsyncWebsocketConsumer):
         if self.username:
             users = ROOM_USERS.get(self.room_code, set())
             users.discard(self.username)
+
+            if not users:
+                del ROOM_USERS[self.room_code]
+
             await self.channel_layer.group_send(
                 self.group_name,
                 {
@@ -60,19 +64,19 @@ class RoomConsumer(AsyncWebsocketConsumer):
                 },
             )
 
-        elif msg_type == "draw":
+        if msg_type == "draw":
             # Broadcast drawing events to the room
             await self.channel_layer.group_send(
                 self.group_name,
                 {
-                    "type": "draw_event",
-                    "x": data["x"],
-                    "y": data["y"],
+                    "type": "draw_line_event",
+                    "from": data["from"],
+                    "to": data["to"],
                     "color": data.get("color", "#000000"),
                     "size": data.get("size", 4),
                 },
             )
-        elif msg_type == "chat":
+        if msg_type == "chat":
             # broadcast chat message
             await self.channel_layer.group_send(
                 self.group_name,
@@ -83,7 +87,7 @@ class RoomConsumer(AsyncWebsocketConsumer):
                 },
             )
 
-        elif msg_type in ("webrtc_offer", "webrtc_answer", "webrtc_candidate"):
+        if msg_type in ("webrtc_offer", "webrtc_answer", "webrtc_candidate"):
             # Relay WebRTC signaling messages
             await self.channel_layer.group_send(
                 self.group_name,
@@ -111,14 +115,13 @@ class RoomConsumer(AsyncWebsocketConsumer):
     async def start_call_event(self, event):
         await self.send(text_data=json.dumps({"type": "start_call"}))
 
-    async def draw_event(self, event):
-        # Send drawing data to the client
+    async def draw_line_event(self, event):
         await self.send(
             text_data=json.dumps(
                 {
                     "type": "draw",
-                    "x": event["x"],
-                    "y": event["y"],
+                    "from": event["from"],
+                    "to": event["to"],
                     "color": event["color"],
                     "size": event["size"],
                 }

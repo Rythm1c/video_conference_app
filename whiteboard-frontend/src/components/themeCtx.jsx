@@ -1,26 +1,36 @@
-// src/ThemeContext.jsx
 import { createContext, useMemo, useState } from "react";
-import { createTheme, ThemeProvider as MUIThemeProvider } from "@mui/material/styles";
+import { createTheme, ThemeProvider } from "@mui/material/styles";
+import CssBaseline from "@mui/material/CssBaseline";
 
 export const ThemeContext = createContext();
 
-export function ThemeProvider({ children }) {
+export default function ThemeManager({ children }) {
     const [mode, setMode] = useState("light");
-    const toggleMode = () => setMode((m) => (m === "light" ? "dark" : "light"));
+
+    const toggleTheme = () => setMode((m) => (m === "light" ? "dark" : "light"));
 
     const theme = useMemo(
         () =>
             createTheme({
                 palette: {
                     mode,
+                    primary: {
+                        main: "#1976d2",
+                    },
+                },
+                shape: {
+                    borderRadius: 8,
                 },
             }),
         [mode]
     );
 
     return (
-        <ThemeContext.Provider value={{ mode, toggleMode }}>
-            <MUIThemeProvider theme={theme}>{children}</MUIThemeProvider>
+        <ThemeContext.Provider value={{ mode, toggleTheme }}>
+            <ThemeProvider theme={theme}>
+                <CssBaseline />
+                {children}
+            </ThemeProvider>
         </ThemeContext.Provider>
     );
 }

@@ -1,95 +1,59 @@
-// src/RoomPage.jsx
+// RoomPage.jsx
 import { useParams } from "react-router-dom";
-import { useContext, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useContext, useState, useRef } from "react";
 import { AuthContext } from "./AuthContext";
-import {
-    AppBar,
-    Container,
-    CssBaseline,
-    Grid,
-    Box,
-    IconButton,
-    Toolbar,
-    Typography,
-} from "@mui/material";
-import LogoutIcon from "@mui/icons-material/Logout";
-import Brightness4Icon from "@mui/icons-material/Brightness4";
-import Brightness7Icon from "@mui/icons-material/Brightness7";
+import { Container, Grid, Typography } from "@mui/material";
 import CanvasWhiteboard from "./canvas";
-import UserList from "./userList";
-import VideoChat from "./VideoChat";
+
+import ParticipantsPanel from "./ParticipantsPanel";
 import ChatPanel from "../components/ChatPanel";
-import { ThemeContext } from "../components/themeCtx";
+import RoomControls from "../components/RoomControls";
 
 export default function RoomPage() {
     const { roomId } = useParams();
-    const { token, user, logout } = useContext(AuthContext);
-    const { mode, toggleMode } = useContext(ThemeContext);
+    const { user, token } = useContext(AuthContext);
+    const localStream = useRef(null);
+
     const [users, setUsers] = useState([]);
     const [remoteStreams, setRemoteStreams] = useState({});
 
-    const navigate = useNavigate();
-
-    const handleLogout = () => {
-        logout();
-        navigate("/login");
-    };
-
-    const handleRemoteStream = (peerUsername, stream) => {
-        setRemoteStreams((prev) => ({ ...prev, [peerUsername]: stream }));
+    const handleRemoteStream = (peer, stream) => {
+        setRemoteStreams((prev) => ({ ...prev, [peer]: stream }));
     };
 
     return (
-        <>
-            <CssBaseline />
-            <AppBar position="static">
-                <Toolbar>
-                    <Typography variant="h6" sx={{ flexGrow: 1 }}>
-                        Room: {roomId}
-                    </Typography>
-
-                    <Box sx={{ mr: 2 }}>
-                        <Typography variant="body1">
-                            {user?.username || "Guest"}
-                        </Typography>
-                    </Box>
-
-                    <IconButton color="inherit" onClick={toggleMode}>
-                        {mode === "light" ? <Brightness4Icon /> : <Brightness7Icon />}
-                    </IconButton>
-
-                    <IconButton color="inherit" onClick={handleLogout}>
-                        <LogoutIcon />
-                    </IconButton>
-                </Toolbar>
-            </AppBar>
-            <Container maxWidth="lg" sx={{ mt: 4 }}>
-                <Grid container spacing={2}>
-                    <Grid size={{ xs: 12, md: 3 }} >
-                        <UserList
-                            roomId={roomId}
-                            username={user.username}
-                            remoteStreams={remoteStreams}
-                            onUserListUpdate={setUsers} />
-                        <VideoChat
-                            roomId={roomId}
-                            username={user.username}
-                            onRemoteStream={handleRemoteStream}
-                        />
-                        <ChatPanel
-                            roomId={roomId}
-                            username={user.username} />
-                    </Grid>
-                    <Grid size={{ xs: 12, md: 9 }}>
-                        <CanvasWhiteboard
-                            roomId={roomId}
-                            username={user.username}
-                            token={token}
-                        />
-                    </Grid>
+        <Container maxWidth="xl" sx={{ mt: 3 }}>
+            <Typography variant="h5" gutterBottom>
+                Room: {roomId}
+            </Typography>
+            <Grid container spacing={3}>
+                {/* Left: Chat */}
+                <Grid item xs={12} md={3} height={"80%"}>
+                    <ChatPanel roomId={roomId} username={user.username} />
                 </Grid>
-            </Container>
-        </>
+
+                {/* Center: Canvas */}
+                <Grid item xs={12} md={6}>
+
+                    <CanvasWhiteboard
+                        roomId={roomId}
+                        username={user.username}
+                        token={token}
+                    />
+                </Grid>
+
+                {/* Right: UserList */}
+                <Grid item xs={12} md={3}>
+                    <ParticipantsPanel roomId={roomId} username={user.username} localStream={localStream} />
+                </Grid>
+            </Grid>
+            <RoomControls
+                streamRef={localStream}
+                onLeave={() => {
+                    // You can manually close sockets here if needed
+                }}
+            />
+
+        </Container>
     );
 }

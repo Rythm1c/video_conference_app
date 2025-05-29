@@ -1,139 +1,167 @@
 import { useEffect, useRef, useState } from "react";
 import {
   Box,
-  Slider,
-  Typography,
   Stack,
   Button,
   IconButton,
+  Slider,
+  Typography,
+  Paper,
+  Divider,
 } from "@mui/material";
 import UndoIcon from "@mui/icons-material/Undo";
 import RedoIcon from "@mui/icons-material/Redo";
+import SaveIcon from "@mui/icons-material/Save";
+import ClearIcon from "@mui/icons-material/Clear";
 
 export default function CanvasWhiteboard({ roomId, username, token }) {
   const canvasRef = useRef(null);
   const ws = useRef(null);
-
-  // Brush settings
   const [brushSize, setBrushSize] = useState(4);
   const [color, setColor] = useState("#000000");
 
-  // Undo/Redo stacks
   const [undoStack, setUndoStack] = useState([]);
   const [redoStack, setRedoStack] = useState([]);
-
-  // Buffer all events for persistence
   const [events, setEvents] = useState([]);
 
-  // Draw helper
-  const drawEvent = (ctx, ev) => {
-    ctx.fillStyle = ev.color;
+  const lastPointRef = useRef(null);
+
+  const drawLine = (ctx, from, to, color, size) => {
     ctx.beginPath();
-    ctx.arc(ev.x, ev.y, ev.size, 0, 2 * Math.PI);
-    ctx.fill();
+    ctx.moveTo(from.x, from.y);
+    ctx.lineTo(to.x, to.y);
+    ctx.strokeStyle = color;
+    ctx.lineWidth = size;
+    ctx.lineCap = "round";
+    ctx.stroke();
   };
 
-  // Clear & replay a given stack
   const redrawAll = (stack) => {
-    const canvas = canvasRef.current;
-    const ctx = canvas.getContext("2d");
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    stack.forEach((ev) => drawEvent(ctx, ev));
+    const ctx = canvasRef.current.getContext("2d");
+    ctx.clearRect(0, 0, canvasRef.current.width, canvasRef.current.height);
+    for (let ev of stack) {
+      drawLine(ctx, ev.from, ev.to, ev.color, ev.size);
+    }
   };
 
-  // Setup: fetch saved, open WS, attach draw handler
   useEffect(() => {
     const canvas = canvasRef.current;
     const ctx = canvas.getContext("2d");
 
-    // Fetch saved events
     fetch(`http://localhost:8000/api/rooms/${roomId}/canvas/`, {
       headers: { Authorization: `Bearer ${token}` },
     })
       .then((res) => res.json())
       .then((data) => {
-        data.data.forEach((ev) => drawEvent(ctx, ev));
-        setEvents(data.data);
-        setUndoStack(data.data);
-        setRedoStack([]);
-      })
-      .catch(console.error);
+        const strokes = data.data || [];
+        for (let ev of strokes) {
+          drawLine(ctx, ev.from, ev.to, ev.color, ev.size);
+        }
+        setEvents(strokes);
+        setUndoStack(strokes);
+      });
 
-    // WebSocket
     ws.current = new WebSocket(`ws://localhost:8000/ws/room/${roomId}/`);
+
     ws.current.onopen = () => {
       ws.current.send(JSON.stringify({ type: "join", username }));
     };
+
     ws.current.onmessage = ({ data }) => {
       const msg = JSON.parse(data);
       if (msg.type === "draw") {
-        const ev = { x: msg.x, y: msg.y, color: msg.color, size: msg.size };
-        drawEvent(ctx, ev);
-        setEvents((e) => [...e, ev]);
+        const ev = msg;
+        const ctx = canvas.getContext("2d");
+        drawLine(ctx, ev.from, ev.to, ev.color, ev.size);
         setUndoStack((u) => [...u, ev]);
-        setRedoStack([]); // clear redo when a new event arrives
+        setEvents((e) => [...e, ev]);
+        setRedoStack([]);
       }
     };
 
-    // Local drawing
-    const handleDraw = (e) => {
-      if (e.buttons !== 1) return;
+    const getPos = (e) => {
       const rect = canvas.getBoundingClientRect();
-      const x = e.clientX - rect.left;
-      const y = e.clientY - rect.top;
-      const ev = { x, y, color, size: brushSize };
+      return {
+        x: e.clientX - rect.left,
+        y: e.clientY - rect.top,
+      };
+    };
 
-      // Send
-      ws.current.send(JSON.stringify({ type: "draw", ...ev }));
-      // Draw
-      drawEvent(ctx, ev);
-      // Update stacks
-      setEvents((evs) => [...evs, ev]);
+    const handleMouseDown = (e) => {
+      lastPointRef.current = getPos(e);
+    };
+
+    const handleMouseUp = () => {
+      lastPointRef.current = null;
+    };
+
+    const handleMouseMove = (e) => {
+      if (e.buttons !== 1 || !lastPointRef.current) return;
+      const newPoint = getPos(e);
+      const ctx = canvas.getContext("2d");
+
+      const ev = {
+        from: lastPointRef.current,
+        to: newPoint,
+        color,
+        size: brushSize,
+        type: "draw",
+        username,
+      };
+
+      drawLine(ctx, ev.from, ev.to, ev.color, ev.size);
+      ws.current.send(JSON.stringify(ev));
       setUndoStack((u) => [...u, ev]);
+      setEvents((e) => [...e, ev]);
       setRedoStack([]);
+
+      lastPointRef.current = newPoint;
     };
 
-    canvas.addEventListener("mousemove", handleDraw);
+    canvas.addEventListener("mousedown", handleMouseDown);
+    canvas.addEventListener("mouseup", handleMouseUp);
+    canvas.addEventListener("mouseleave", handleMouseUp);
+    canvas.addEventListener("mousemove", handleMouseMove);
+
     return () => {
-      canvas.removeEventListener("mousemove", handleDraw);
-      ws.current.close();
+      canvas.removeEventListener("mousedown", handleMouseDown);
+      canvas.removeEventListener("mouseup", handleMouseUp);
+      canvas.removeEventListener("mouseleave", handleMouseUp);
+      canvas.removeEventListener("mousemove", handleMouseMove);
+      ws.current?.close();
     };
-  }, [roomId, username, color, brushSize, token]);
+  }, [roomId, username, token, brushSize, color]);
 
-  // Undo handler
   const handleUndo = () => {
-    if (!undoStack.length) return;
-    const newUndo = undoStack.slice(0, -1);
-    const last = undoStack[undoStack.length - 1];
+    const newUndo = [...undoStack];
+    const last = newUndo.pop();
+    if (!last) return;
     setUndoStack(newUndo);
     setRedoStack((r) => [...r, last]);
     redrawAll(newUndo);
     setEvents(newUndo);
   };
 
-  // Redo handler
   const handleRedo = () => {
-    if (!redoStack.length) return;
-    const last = redoStack[redoStack.length - 1];
-    const newRedo = redoStack.slice(0, -1);
+    const newRedo = [...redoStack];
+    const last = newRedo.pop();
+    if (!last) return;
     const newUndo = [...undoStack, last];
-    setRedoStack(newRedo);
     setUndoStack(newUndo);
+    setRedoStack(newRedo);
     redrawAll(newUndo);
     setEvents(newUndo);
   };
 
-  // Clear everything
-  const clearCanvas = () => {
-    const canvas = canvasRef.current;
-    canvas.getContext("2d").clearRect(0, 0, canvas.width, canvas.height);
+  const handleClear = () => {
+    const ctx = canvasRef.current.getContext("2d");
+    ctx.clearRect(0, 0, canvasRef.current.width, canvasRef.current.height);
     setUndoStack([]);
     setRedoStack([]);
     setEvents([]);
   };
 
-  // Save as before...
-  const saveCanvas = () => {
+  const handleSave = () => {
     fetch(`http://localhost:8000/api/rooms/${roomId}/canvas/`, {
       method: "PUT",
       headers: {
@@ -144,53 +172,44 @@ export default function CanvasWhiteboard({ roomId, username, token }) {
     })
       .then((res) => {
         if (!res.ok) throw new Error("Save failed");
-        alert("Canvas saved!");
+        alert("Saved!");
       })
       .catch((err) => alert(err.message));
   };
 
   return (
-    <Box>
-      <Stack direction="row" spacing={1} alignItems="center" mb={2}>
-        {/* Undo/Redo */}
+    <Paper sx={{ p: 2 }}>
+      <Stack direction="row" spacing={2} alignItems="center" mb={2}>
+        <Typography variant="subtitle1">Brush</Typography>
+        <Slider
+          value={brushSize}
+          onChange={(e, v) => setBrushSize(v)}
+          min={1}
+          max={20}
+          sx={{ width: 120 }}
+        />
+        <input type="color" value={color} onChange={(e) => setColor(e.target.value)} />
+        <Divider orientation="vertical" flexItem />
         <IconButton onClick={handleUndo} disabled={!undoStack.length}>
           <UndoIcon />
         </IconButton>
         <IconButton onClick={handleRedo} disabled={!redoStack.length}>
           <RedoIcon />
         </IconButton>
-
-        {/* Brush controls */}
-        <Typography>Size</Typography>
-        <Slider
-          value={brushSize}
-          onChange={(e, v) => setBrushSize(v)}
-          min={1}
-          max={20}
-          sx={{ width: 150 }}
-        />
-        <Typography>Color</Typography>
-        <input
-          type="color"
-          value={color}
-          onChange={(e) => setColor(e.target.value)}
-        />
-
-        {/* Clear/Save */}
-        <Button variant="outlined" onClick={clearCanvas}>
-          Clear
-        </Button>
-        <Button variant="contained" onClick={saveCanvas}>
-          Save
-        </Button>
+        <IconButton onClick={handleClear}>
+          <ClearIcon />
+        </IconButton>
+        <IconButton onClick={handleSave}>
+          <SaveIcon />
+        </IconButton>
       </Stack>
 
       <canvas
         ref={canvasRef}
         width={800}
-        height={600}
-        style={{ border: "1px solid #ccc", borderRadius: 8 }}
+        height={500}
+        style={{ border: "2px solid #ccc", borderRadius: 8 }}
       />
-    </Box>
+    </Paper>
   );
 }

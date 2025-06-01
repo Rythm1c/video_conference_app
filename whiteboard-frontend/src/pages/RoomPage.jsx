@@ -2,7 +2,7 @@
 import { useParams } from "react-router-dom";
 import { useContext, useState, useRef } from "react";
 import { AuthContext } from "./AuthContext";
-import { Container, Grid, Typography, Box } from "@mui/material";
+import { Container, Grid, Box } from "@mui/material";
 import CanvasWhiteboard from "./canvas";
 
 import ParticipantsPanel from "./ParticipantsPanel";
@@ -26,12 +26,7 @@ export default function RoomPage() {
         <Container disableGutters maxWidth="xxl" sx={{ height: "90vh", display: "flex", flexDirection: "column", padding: 2 }}>
 
             <Grid container sx={{ flexGrow: 1, overflow: "hidden" }}>
-                {/* Left: Chat */}
-                {chatOpen && <Grid size={{ xs: 12, md: 3 }} sx={{ height: "100%", overflow: "auto" }} >
-                    <ChatPanel roomId={roomId} username={user.username} />
-                </Grid>}
-
-                {/* Center: Canvas */}
+                {/*  Canvas */}
                 <Grid size={{ xs: 12, md: 6 }}
                     sx={{
                         display: "flex",
@@ -51,8 +46,11 @@ export default function RoomPage() {
                             token={token} />
                     </Box>
                 </Grid>
-
-                {/* Right: UserList */}
+                {/*  Chat */}
+                {chatOpen && <Grid size={{ xs: 12, md: 3 }} sx={{ height: "100%", overflow: "auto" }} >
+                    <ChatPanel roomId={roomId} username={user.username} />
+                </Grid>}
+                {/*  UserList */}
                 <Grid size={{ xs: 12, md: 3 }} sx={{ height: "100%", overflow: "auto", p: 2 }}>
                     <ParticipantsPanel roomId={roomId} username={user.username} localStream={localStream} />
                 </Grid>
@@ -62,7 +60,6 @@ export default function RoomPage() {
                 setChatOpen={setChatOpen}
                 streamRef={localStream}
                 onLeave={() => {
-                    // You can manually close sockets here if needed
                 }}
             />
 

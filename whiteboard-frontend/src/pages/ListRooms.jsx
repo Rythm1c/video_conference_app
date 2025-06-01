@@ -22,12 +22,24 @@ export default function ListRooms() {
     const navigate = useNavigate();
 
     useEffect(() => {
+        if (!token) {
+            // If there’s no token in localStorage or AuthContext, redirect to login
+            navigate("/login");
+            return;
+        }
+
         axios.get("/rooms/list/", {
             headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
         })
             .then((res) => setRooms(res.data))
-            .catch(console.error);
-    }, []);
+            .catch((err) => {
+                if (err.response?.status === 401) {
+                    // Token really is invalid—force logout/redirect
+                    localStorage.removeItem("token");
+                    navigate("/login");
+                }
+            });
+    }, [token, navigate]);
 
     const handleJoinClick = (room) => {
         if (room.is_private) {
@@ -51,6 +63,11 @@ export default function ListRooms() {
             navigate(`/room/${selected.code}`);
         } catch (err) {
             setError(err.response?.data?.detail || "Join failed");
+            if (err.response?.status === 401) {
+                // Token really is invalid—force logout/redirect
+                localStorage.removeItem("token");
+                navigate("/login");
+            }
         }
     };
 

@@ -14,7 +14,7 @@ function RoomCard({ room, handleJoinClick }) {
             width: '100%',
             minHeight: 180,
             border: '1px solid #ccc',
-            borderRadius: 2,
+            borderRadius: 1,
             p: 2,
             display: 'flex',
             flexDirection: 'column',
@@ -22,9 +22,12 @@ function RoomCard({ room, handleJoinClick }) {
             height: '100%',
             boxShadow: 1,
         }}>
-            {room.name.length > 8 ? <Tooltip title={room.name} arrow>
-                <Typography variant="h6" noWrap>{displayName}</Typography>
-            </Tooltip> : <Typography variant="h6" noWrap>{displayName}</Typography>}
+            {room.name.length > 8 ? 
+            <Tooltip title={room.name} arrow>
+                <Typography variant="h7" noWrap>
+                    {displayName}
+                    </Typography>
+            </Tooltip> : <Typography variant="h7" noWrap>{displayName}</Typography>}
             <Chip
                 icon={room.is_private ? <LockIcon /> : <PublicIcon />}
                 label={room.is_private ? 'Private' : 'Public'}

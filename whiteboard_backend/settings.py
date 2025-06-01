@@ -152,3 +152,17 @@ CHANNEL_LAYERS = {
 }
 
 APPEND_SLASH = True
+
+from datetime import timedelta
+
+SIMPLE_JWT = {
+    # Make the access token valid for 24 hours
+    "ACCESS_TOKEN_LIFETIME": timedelta(hours=24),
+    # If you’re using refresh tokens, also extend theirs:
+    "REFRESH_TOKEN_LIFETIME": timedelta(days=7),
+
+    # (Optional) other SimpleJWT settings follow…
+    "ROTATE_REFRESH_TOKENS": False,
+    "BLACKLIST_AFTER_ROTATION": True,
+}
+

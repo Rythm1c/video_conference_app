@@ -82,7 +82,7 @@ export default function ChatPanel({ roomId, username }) {
     }, [windowFocused]);
 
     return (
-        <Paper sx={{ p: 2, height: 600, display: "flex", flexDirection: "column" }}>
+        <Paper sx={{ p: 2, height: "100%", display: "flex", flexDirection: "column" }}>
             <Box sx={{ display: "flex", alignItems: "center", mb: 1 }}>
                 <Badge badgeContent={unread} color="error">
                     <ChatIcon />

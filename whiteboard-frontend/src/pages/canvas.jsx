@@ -26,6 +26,31 @@ export default function CanvasWhiteboard({ roomId, username, token }) {
 
   const lastPointRef = useRef(null);
 
+  const resizeCanvas = () => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const parent = canvas.parentElement;
+    // Use devicePixelRatio to keep it crisp
+    const dpr = window.devicePixelRatio || 1;
+    const width = parent.clientWidth;
+    const height = parent.clientHeight;
+    canvas.style.width = width + "px";
+    canvas.style.height = height + "px";
+    canvas.width = width * dpr;
+    canvas.height = height * dpr;
+    const ctx = canvas.getContext("2d");
+    ctx.scale(dpr, dpr);
+  };
+
+  useEffect(() => {
+    // Initial size
+    resizeCanvas();
+    // Resize on window change
+    window.addEventListener("resize", resizeCanvas);
+    return () => window.removeEventListener("resize", resizeCanvas);
+  }, []);
+
+
   const drawLine = (ctx, from, to, color, size) => {
     ctx.beginPath();
     ctx.moveTo(from.x, from.y);
@@ -178,7 +203,7 @@ export default function CanvasWhiteboard({ roomId, username, token }) {
   };
 
   return (
-    <Paper sx={{ p: 2 }}>
+    <Paper sx={{ width: "100%", height: "100%", p: 0 }} >
       <Stack direction="row" spacing={2} alignItems="center" mb={2}>
         <Typography variant="subtitle1">Brush</Typography>
         <Slider
@@ -206,10 +231,8 @@ export default function CanvasWhiteboard({ roomId, username, token }) {
 
       <canvas
         ref={canvasRef}
-        width={800}
-        height={500}
-        style={{ border: "2px solid #ccc", borderRadius: 8 }}
-      />
+        style={{ border: "2px solid #ccc", borderRadius: 8, display: "block" }} />
+
     </Paper>
   );
 }

@@ -166,13 +166,13 @@ export default function ParticipantsPanel({ roomId, username, localStream }) {
     };
 
     return (
-        <Paper sx={{ p: 2 }}>
+        <Paper sx={{ p: 2, height: "100%" }}>
             <Typography variant="h6" gutterBottom>
                 Participants ({users.length})
             </Typography>
             <Grid container spacing={1}>
                 {users.map((u) => (
-                    <Grid item xs={12} key={u}>
+                    <Grid item sx={{ width: "100%" }} xs={12} key={u}>
                         <Card variant="outlined">
                             <CardHeader
                                 avatar={<Avatar>{u[0].toUpperCase()}</Avatar>}
@@ -192,7 +192,7 @@ export default function ParticipantsPanel({ roomId, username, localStream }) {
                                     </Box>
                                 }
                             />
-                            <CardContent sx={{ pt: 0 }}>
+                            <CardContent sx={{ pt: 0, width: "100%" }}>
                                 {streams[u] ? (
                                     <video
                                         autoPlay
@@ -203,15 +203,23 @@ export default function ParticipantsPanel({ roomId, username, localStream }) {
                                             }
                                         }}
                                         style={{
-                                            width: 120,
-                                            height: 90,
+                                            width: "100%",
                                             objectFit: "cover",
                                             borderRadius: 4,
                                             backgroundColor: "#000",
                                         }}
                                     />
                                 ) : (
-                                    <Typography color="textSecondary">No video</Typography>
+                                    <Typography
+                                        color="textSecondary"
+                                        style={{
+                                            width: "100%",
+                                            objectFit: "cover",
+                                            borderRadius: 4,
+                                            backgroundColor: "#000",
+                                        }}>
+                                        No video
+                                    </Typography>
                                 )}
                             </CardContent>
                         </Card>

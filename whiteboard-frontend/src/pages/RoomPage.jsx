@@ -2,7 +2,7 @@
 import { useParams } from "react-router-dom";
 import { useContext, useState, useRef } from "react";
 import { AuthContext } from "./AuthContext";
-import { Container, Grid, Typography } from "@mui/material";
+import { Container, Grid, Typography, Box } from "@mui/material";
 import CanvasWhiteboard from "./canvas";
 
 import ParticipantsPanel from "./ParticipantsPanel";
@@ -12,6 +12,7 @@ import RoomControls from "../components/RoomControls";
 export default function RoomPage() {
     const { roomId } = useParams();
     const { user, token } = useContext(AuthContext);
+    const [chatOpen, setChatOpen] = useState(true);
     const localStream = useRef(null);
 
     const [users, setUsers] = useState([]);
@@ -22,32 +23,43 @@ export default function RoomPage() {
     };
 
     return (
-        <Container maxWidth="xl" sx={{ mt: 3 }}>
-            <Typography variant="h5" gutterBottom>
-                Room: {roomId}
-            </Typography>
-            <Grid container spacing={3}>
+        <Container disableGutters maxWidth="xxl" sx={{ height: "90vh", display: "flex", flexDirection: "column", padding: 2 }}>
+
+            <Grid container sx={{ flexGrow: 1, overflow: "hidden" }}>
                 {/* Left: Chat */}
-                <Grid item xs={12} md={3} height={"80%"}>
+                {chatOpen && <Grid size={{ xs: 12, md: 3 }} sx={{ height: "100%", overflow: "auto" }} >
                     <ChatPanel roomId={roomId} username={user.username} />
-                </Grid>
+                </Grid>}
 
                 {/* Center: Canvas */}
-                <Grid item xs={12} md={6}>
+                <Grid size={{ xs: 12, md: 6 }}
+                    sx={{
+                        display: "flex",
+                        flexDirection: "column",
+                        height: "80%",
+                        p: 2,
+                    }}>
+                    <Box
+                        sx={{
+                            flexGrow: 1,
+                            position: "relative",
+                        }} >
 
-                    <CanvasWhiteboard
-                        roomId={roomId}
-                        username={user.username}
-                        token={token}
-                    />
+                        <CanvasWhiteboard
+                            roomId={roomId}
+                            username={user.username}
+                            token={token} />
+                    </Box>
                 </Grid>
 
                 {/* Right: UserList */}
-                <Grid item xs={12} md={3}>
+                <Grid size={{ xs: 12, md: 3 }} sx={{ height: "100%", overflow: "auto", p: 2 }}>
                     <ParticipantsPanel roomId={roomId} username={user.username} localStream={localStream} />
                 </Grid>
             </Grid>
             <RoomControls
+                chatOpen={chatOpen}
+                setChatOpen={setChatOpen}
                 streamRef={localStream}
                 onLeave={() => {
                     // You can manually close sockets here if needed

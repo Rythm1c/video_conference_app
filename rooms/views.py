@@ -11,17 +11,46 @@ class CreateRoomView(APIView):
     permission_classes = [IsAuthenticated]
 
     def post(self, request):
-        serializer = RoomSerializer(data=request.data)
+        data = request.data.copy()
+        data["created_by"] = request.user.id
+        serializer = RoomSerializer(data=data)
         if serializer.is_valid():
             room = serializer.save(created_by=request.user)
-            return Response(RoomSerializer(room).data, status=status.HTTP_201_CREATED)
+            resp = RoomSerializer(room).data
+            # include password in response for private rooms
+            if room.is_private:
+                resp["password"] = room.password
+            return Response(resp, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
-class ListPublicRoomsView(ListAPIView):
-    queryset = Room.objects.filter(is_private=False).order_by("-created_at")
+class ListRoomsView(ListAPIView):
+    queryset = Room.objects.all().order_by("-created_at")
     serializer_class = RoomSerializer
     permission_classes = [IsAuthenticated]
+
+
+
+
+class JoinRoomView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        code = request.data.get("code")
+        pwd = request.data.get("password", "")
+        try:
+            room = Room.objects.get(code=code)
+        except Room.DoesNotExist:
+            return Response(
+                {"detail": "Room not found."}, status=status.HTTP_404_NOT_FOUND
+            )
+
+        if room.is_private:
+            if pwd != room.password:
+                return Response(
+                    {"detail": "Invalid password."}, status=status.HTTP_400_BAD_REQUEST
+                )
+        return Response({"detail": "Joined"}, status=status.HTTP_200_OK)
 
 
 class CanvasStateView(RetrieveAPIView, UpdateAPIView):

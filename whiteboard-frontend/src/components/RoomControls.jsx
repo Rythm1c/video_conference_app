@@ -12,13 +12,15 @@ import {
 } from "@mui/material";
 import { useNavigate } from "react-router-dom";
 import { useState } from "react";
+import ChatIcon from "@mui/icons-material/Chat";
+import ChatBubbleOutlineIcon from "@mui/icons-material/ChatBubbleOutline";
 import MicIcon from "@mui/icons-material/Mic";
 import MicOffIcon from "@mui/icons-material/MicOff";
 import VideocamIcon from "@mui/icons-material/Videocam";
 import VideocamOffIcon from "@mui/icons-material/VideocamOff";
 import ExitToAppIcon from "@mui/icons-material/ExitToApp";
 
-export default function RoomControls({ streamRef, onLeave }) {
+export default function RoomControls({ streamRef, onLeave, chatOpen, setChatOpen }) {
     const navigate = useNavigate();
     const [micOn, setMicOn] = useState(true);
     const [camOn, setCamOn] = useState(true);
@@ -61,7 +63,15 @@ export default function RoomControls({ streamRef, onLeave }) {
                     justifyContent: "center",
                     zIndex: 10,
                 }}
+
             >
+                <Box>
+                    <Tooltip title={chatOpen ? "Hide Chat" : "Show Chat"}>
+                        <IconButton onClick={() => setChatOpen((prev) => !prev)}>
+                            {chatOpen ? <ChatIcon /> : <ChatBubbleOutlineIcon />}
+                        </IconButton>
+                    </Tooltip>
+                </Box>
                 <Tooltip title={micOn ? "Mute" : "Unmute"}>
                     <IconButton onClick={toggleMic}>
                         {micOn ? <MicIcon /> : <MicOffIcon />}

@@ -71,9 +71,9 @@ export default function ListRooms() {
     };
 
     return (
-        <>
+        <div style={{ height: "100vh", }}>
             <TopBar />
-            <Paper sx={{ p: 2, mt: 4 }}>
+            <Paper sx={{ p: 2, mt: 1, height: "100%", width: "100%" }}>
                 <Typography variant="h6" gutterBottom>
                     All Rooms
                 </Typography>
@@ -105,6 +105,6 @@ export default function ListRooms() {
                     <Button onClick={handleConfirm} variant="contained">Join</Button>
                 </DialogActions>
             </Dialog>
-        </>
+        </div>
     );
 }

@@ -26,7 +26,7 @@ cd location/of/cloned/repo
 after that create a virtual environment and activating it then run
 
 ```
-pip install -r requirements 
+pip install -r requirements.txt
 ```
 
 ### step 4:

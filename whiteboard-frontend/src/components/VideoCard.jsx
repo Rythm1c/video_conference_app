@@ -4,25 +4,25 @@ import { CardContent, Typography, Box } from "@mui/material";
 function VideoCard({ username, user, stream }) {
     return (
         <Box
-            sx={{ position: "relative", borderRadius: 1, overflow: "hidden", height: 200 }}>
+            sx={{ position: "relative", borderRadius: 1, overflow: "hidden", height: "100%" }}>
             {/* <CardHeader
-                                            avatar={<Avatar>{u[0].toUpperCase()}</Avatar>}
-                                            title={
-                                                <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-                                                    {u === username ? `${u} (You)` : u}
-                                                    {!status[u]?.mic && (
-                                                        <Tooltip title="Mic off">
-                                                            <MicOffIcon fontSize="small" color="disabled" />
-                                                        </Tooltip>
-                                                    )}
-                                                    {!status[u]?.cam && (
-                                                        <Tooltip title="Camera off">
-                                                            <VideocamOffIcon fontSize="small" color="disabled" />
-                                                        </Tooltip>
-                                                    )}
-                                                </Box>
-                                            }
-                                        /> */}
+                avatar={<Avatar>{u[0].toUpperCase()}</Avatar>}
+                title={
+                    <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                        {u === username ? `${u} (You)` : u}
+                        {!status[u]?.mic && (
+                            <Tooltip title="Mic off">
+                                <MicOffIcon fontSize="small" color="disabled" />
+                            </Tooltip>
+                        )}
+                        {!status[u]?.cam && (
+                            <Tooltip title="Camera off">
+                                <VideocamOffIcon fontSize="small" color="disabled" />
+                            </Tooltip>
+                        )}
+                    </Box>
+                }
+            /> */}
             {stream ? (
                 <video
                     autoPlay

@@ -180,15 +180,18 @@ export default function ParticipantsPanel({ canvasOpen, roomId, username, localS
     return (
         <>
             {canvasOpen ?
-                <Box sx={{ display: "flex", flexDirection: "column", gap: 2, overflowY: "auto", height: "100%", border: "1px solid #ccc", borderRadius: 0, padding: 1 }}>
+                <Box sx={{ display: "flex", flexDirection: "row", gap: 2, overflowY: "auto", border: "1px solid #ccc", borderRadius: 0, padding: 1 }}>
                     {users.map((u) => (
-                        <VideoCard
-                            stream={streams[u]}
-                            user={u}
-                            username={username} />
+                        <Box sx={{ position: "relative", borderRadius: 2, overflow: "hidden", minHeight: 200, width: 200 }}>
+                            <VideoCard
+                                stream={streams[u]}
+                                user={u}
+                                username={username} />
+                        </Box>
                     ))}
-                </Box> :
-                <Box sx={{ display: "flex", flexDirection: "column", width: "100%", height: "100%" }}>
+                </Box>
+                :
+                <Box sx={{ display: "flex", flexDirection: "column", width: "100%", border: "1px solid #ccc", borderRadius: 0, padding: 1 }}>
 
                     {
                         userRows.map((row, rowIndex) => (
@@ -199,24 +202,14 @@ export default function ParticipantsPanel({ canvasOpen, roomId, username, localS
                                         sx={{
                                             flex: 1,
                                             maxWidth: `${100 / row.length}%`,
-                                            aspectRatio: "16 / 9",
+                                            aspectRatio: "11 / 3",
                                             p: 1,
                                             position: "relative",
                                         }}>
-                                        <video
-                                            autoPlay
-                                            muted={user === username}
-                                            ref={(el) => {
-                                                if (el && el.srcObject !== streams[user]) {
-                                                    el.srcObject = streams[user];
-                                                }
-                                            }}
-                                            style={{
-                                                width: "100%",
-                                                height: "100%",
-                                                objectFit: "cover",
-                                                borderRadius: 8
-                                            }} />
+                                        <VideoCard
+                                            stream={streams[user]}
+                                            user={user}
+                                            username={username} />
                                     </Box>
                                 ))}
                             </Box>

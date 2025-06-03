@@ -82,7 +82,7 @@ export default function ChatPanel({ roomId, username }) {
     }, [windowFocused]);
 
     return (
-        <Paper sx={{ p: 2, height: "100%", display: "flex", flexDirection: "column" }}>
+        <Box sx={{ p: 1, height: "100%", display: "flex", flexDirection: "column", border: "1px solid #ccc" }}>
             <Box sx={{ display: "flex", alignItems: "center", mb: 1 }}>
                 <Badge badgeContent={unread} color="error">
                     <ChatIcon />
@@ -103,7 +103,7 @@ export default function ChatPanel({ roomId, username }) {
                 </List>
             </Box>
 
-            <Box sx={{ display: "flex", gap: 1 }}>
+            <Box sx={{ width: "100%", display: "flex", gap: 1 }}>
                 <TextField
                     fullWidth
                     size="small"
@@ -121,12 +121,11 @@ export default function ChatPanel({ roomId, username }) {
                 open={snackbarOpen}
                 autoHideDuration={2000}
                 onClose={handleSnackbarClose}
-                anchorOrigin={{ vertical: "top", horizontal: "right" }}
-            >
+                anchorOrigin={{ vertical: "top", horizontal: "right" }} >
                 <Alert severity="info" onClose={handleSnackbarClose}>
                     You have {unread} new message{unread !== 1 ? "s" : ""}
                 </Alert>
             </Snackbar>
-        </Paper>
+        </Box>
     );
 }

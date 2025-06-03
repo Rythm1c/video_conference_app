@@ -23,6 +23,20 @@ export default function Login() {
 
     return (
         <Box component="form" onSubmit={handleSubmit} sx={{ mx: 'auto', mt: 8, width: 320, display: 'flex', flexDirection: 'column', gap: 2 }}>
+            <Box
+                sx={{
+                    display: 'flex',
+                    justifyContent: 'center',
+                    mb: 2,
+                    borderRadius: 1,
+                    bgcolor: 'skyblue',
+                    padding: 1
+                }}
+                onHover={{ cursor: 'pointer' }}>
+                <Button variant="h4" onClick={() => navigate('/')} sx={{ fontWeight: 'bold' }}>
+                    Whiteboard
+                </Button>
+            </Box>
             <Typography variant="h5" align="center">Log In</Typography>
             <TextField label="Username" value={username} onChange={(e) => setUsername(e.target.value)} required />
             <TextField label="Password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} required />

@@ -23,7 +23,7 @@ export default function CreateRoom() {
         try {
             const res = await axios.post(
                 "/rooms/create/",
-                { name, is_private: isPrivate, password },
+                { name, is_private: isPrivate, password: password.trim() || undefined },
                 { headers: { Authorization: `Bearer ${token}` } }
             );
             const roomCode = res.data.code;

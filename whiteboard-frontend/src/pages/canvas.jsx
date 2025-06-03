@@ -203,8 +203,8 @@ export default function CanvasWhiteboard({ roomId, username, token }) {
   };
 
   return (
-    <Paper sx={{ width: "100%", height: "100%", p: 0 }} >
-      <Stack direction="row" spacing={2} alignItems="center" mb={2}>
+    <Box sx={{ width: "100%", height: "100%", p: 1, border: "1px solid #ccc" }} >
+      <Stack direction="row" spacing={1} alignItems="center" mb={2}>
         <Typography variant="subtitle1">Brush</Typography>
         <Slider
           value={brushSize}
@@ -231,8 +231,8 @@ export default function CanvasWhiteboard({ roomId, username, token }) {
 
       <canvas
         ref={canvasRef}
-        style={{ border: "2px solid #ccc", borderRadius: 8, display: "block" }} />
+        style={{ border: "1px solid #ccc", borderRadius: 1, display: "block" }} />
 
-    </Paper>
+    </Box>
   );
 }

@@ -5,6 +5,8 @@ import AddIcon from '@mui/icons-material/Add';
 import SearchIcon from '@mui/icons-material/Search';
 import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
 
+import TopBar from "./components/TopBar";
+
 import { Link } from "react-router-dom";
 
 
@@ -35,32 +37,35 @@ const BackgroundBox = styled(Box)(({ theme }) => ({
 
 export default function App() {
   return (
-    <BackgroundBox>
-      <Container maxWidth="sm">
-        <Typography variant="h2" gutterBottom>
-          Welcome to Whiteboard
-        </Typography>
-        <Typography variant="h6" gutterBottom>
-          Real-time collaboration with video chat and shared canvas. Jump right in.
-        </Typography>
-        <Stack direction="column" spacing={2} mt={4}>
-          <Button
-            variant="contained"
-            color="primary"
-            size="large"
-            startIcon={<AddIcon />}
-            endIcon={<ArrowForwardIcon />} component={Link} to="/create-room">
-            Create Room
-          </Button>
-          <Button variant="outlined"
-            color="inherit"
-            size="large"
-            startIcon={<SearchIcon />}
-            component={Link} to="/rooms">
-            Browse Rooms
-          </Button>
-        </Stack>
-      </Container>
-    </BackgroundBox>
+    <>
+      <TopBar />
+      <BackgroundBox>
+        <Container maxWidth="sm">
+          <Typography variant="h2" gutterBottom>
+            Welcome to Whiteboard
+          </Typography>
+          <Typography variant="h6" gutterBottom>
+            Real-time collaboration with video chat and shared canvas. Jump right in.
+          </Typography>
+          <Stack direction="column" spacing={2} mt={4}>
+            <Button
+              variant="contained"
+              color="primary"
+              size="large"
+              startIcon={<AddIcon />}
+              endIcon={<ArrowForwardIcon />} component={Link} to="/create-room">
+              Create Room
+            </Button>
+            <Button variant="outlined"
+              color="inherit"
+              size="large"
+              startIcon={<SearchIcon />}
+              component={Link} to="/rooms">
+              Browse Rooms
+            </Button>
+          </Stack>
+        </Container>
+      </BackgroundBox>
+    </>
   );
 }

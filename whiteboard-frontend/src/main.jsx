@@ -8,7 +8,6 @@ import Login from "./pages/login.jsx";
 import Register from "./pages/register.jsx";
 import ListRooms from "./pages/ListRooms.jsx";
 import CreateRoom from "./forms/CreateRoom.jsx";
-import MainLayout from "./pages/MainLayout.jsx";
 import ThemeManager from "./components/themeCtx.jsx";
 import "./index.css";
 
@@ -23,14 +22,12 @@ ReactDOM.createRoot(document.getElementById("root")).render(
       <ThemeManager>
         <AuthProvider>
           <Routes>
-            <Route element={<MainLayout />}>
-              <Route path="/" element={<App />} />
-              <Route path="/login" element={<Login />} />
-              <Route path="/register" element={<Register />} />
-              <Route path="/create-room" element={<RequireAuth><CreateRoom /></RequireAuth>} />
-              <Route path="/rooms" element={<RequireAuth><ListRooms /></RequireAuth>} />
-              <Route path="/room/:roomId" element={<RequireAuth><RoomPage /></RequireAuth>} />
-            </Route>
+            <Route path="/" element={<App />} />
+            <Route path="/login" element={<Login />} />
+            <Route path="/register" element={<Register />} />
+            <Route path="/create-room" element={<RequireAuth><CreateRoom /></RequireAuth>} />
+            <Route path="/rooms" element={<RequireAuth><ListRooms /></RequireAuth>} />
+            <Route path="/room/:roomId" element={<RequireAuth><RoomPage /></RequireAuth>} />
           </Routes>
         </AuthProvider>
       </ThemeManager>

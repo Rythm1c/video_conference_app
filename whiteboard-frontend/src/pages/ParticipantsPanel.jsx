@@ -12,15 +12,16 @@ import {
 } from "@mui/material";
 import MicOffIcon from "@mui/icons-material/MicOff";
 import VideocamOffIcon from "@mui/icons-material/VideocamOff";
+import VideoCard from "../components/VideoCard";
 
-export default function ParticipantsPanel({ roomId, username, localStream }) {
+export default function ParticipantsPanel({ canvasOpen, roomId, username, localStream }) {
     const ws = useRef(null);
     const pcs = useRef(new Map());
 
     const [users, setUsers] = useState([]);
     const [streams, setStreams] = useState({});
     const [status, setStatus] = useState({}); // { username: { mic: bool, cam: bool } }
-
+    const [userRows, setUserRows] = useState([]);
     const updateStream = (user, stream) =>
         setStreams((prev) => ({ ...prev, [user]: stream }));
 
@@ -133,7 +134,18 @@ export default function ParticipantsPanel({ roomId, username, localStream }) {
                 })
                 .catch(console.error);
         });
+
     }, [users, username]);
+
+    useEffect(() => {
+        //if (canvasOpen) return;
+        let rows = [];
+        const MAX_PER_ROW = 6; // Adjust as needed for your layout
+        for (let i = 0; i < users.length; i += MAX_PER_ROW) {
+            rows.push(users.slice(i, i + MAX_PER_ROW));
+        }
+        setUserRows(rows);
+    }, [users, canvasOpen]);
 
     const createPeerConnection = (peer) => {
         const pc = new RTCPeerConnection({
@@ -166,66 +178,53 @@ export default function ParticipantsPanel({ roomId, username, localStream }) {
     };
 
     return (
-        <Paper sx={{ p: 2, height: "100%" }}>
-            <Typography variant="h6" gutterBottom>
-                Participants ({users.length})
-            </Typography>
-            <Grid container spacing={1}>
-                {users.map((u) => (
-                    <Grid item sx={{ width: "100%" }} xs={12} key={u}>
-                        <Card variant="outlined">
-                            <CardHeader
-                                avatar={<Avatar>{u[0].toUpperCase()}</Avatar>}
-                                title={
-                                    <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-                                        {u === username ? `${u} (You)` : u}
-                                        {!status[u]?.mic && (
-                                            <Tooltip title="Mic off">
-                                                <MicOffIcon fontSize="small" color="disabled" />
-                                            </Tooltip>
-                                        )}
-                                        {!status[u]?.cam && (
-                                            <Tooltip title="Camera off">
-                                                <VideocamOffIcon fontSize="small" color="disabled" />
-                                            </Tooltip>
-                                        )}
-                                    </Box>
-                                }
-                            />
-                            <CardContent sx={{ pt: 0, width: "100%" }}>
-                                {streams[u] ? (
-                                    <video
-                                        autoPlay
-                                        muted={u === username}
-                                        ref={(el) => {
-                                            if (el && el.srcObject !== streams[u]) {
-                                                el.srcObject = streams[u];
-                                            }
-                                        }}
-                                        style={{
-                                            width: "100%",
-                                            objectFit: "cover",
-                                            borderRadius: 4,
-                                            backgroundColor: "#000",
-                                        }}
-                                    />
-                                ) : (
-                                    <Typography
-                                        color="textSecondary"
-                                        style={{
-                                            width: "100%",
-                                            objectFit: "cover",
-                                            borderRadius: 4,
-                                            backgroundColor: "#000",
+        <>
+            {canvasOpen ?
+                <Box sx={{ display: "flex", flexDirection: "column", gap: 2, overflowY: "auto", height: "100%", border: "1px solid #ccc", borderRadius: 0, padding: 1 }}>
+                    {users.map((u) => (
+                        <VideoCard
+                            stream={streams[u]}
+                            user={u}
+                            username={username} />
+                    ))}
+                </Box> :
+                <Box sx={{ display: "flex", flexDirection: "column", width: "100%", height: "100%" }}>
+
+                    {
+                        userRows.map((row, rowIndex) => (
+                            <Box key={rowIndex} sx={{ display: "flex", flexGrow: 1 }}>
+                                {row.map((user) => (
+                                    <Box
+                                        key={user}
+                                        sx={{
+                                            flex: 1,
+                                            maxWidth: `${100 / row.length}%`,
+                                            aspectRatio: "16 / 9",
+                                            p: 1,
+                                            position: "relative",
                                         }}>
-                                        No video
-                                    </Typography>
-                                )}
-                            </CardContent>
-                        </Card>
-                    </Grid>
-                ))}
-            </Grid>
-        </Paper>
+                                        <video
+                                            autoPlay
+                                            muted={user === username}
+                                            ref={(el) => {
+                                                if (el && el.srcObject !== streams[user]) {
+                                                    el.srcObject = streams[user];
+                                                }
+                                            }}
+                                            style={{
+                                                width: "100%",
+                                                height: "100%",
+                                                objectFit: "cover",
+                                                borderRadius: 8
+                                            }} />
+                                    </Box>
+                                ))}
+                            </Box>
+                        ))
+                    }
+                </Box>
+            }
+        </>
     );
+
 }

@@ -29,9 +29,6 @@ class ListRoomsView(ListAPIView):
     serializer_class = RoomSerializer
     permission_classes = [IsAuthenticated]
 
-
-
-
 class JoinRoomView(APIView):
     permission_classes = [IsAuthenticated]
 

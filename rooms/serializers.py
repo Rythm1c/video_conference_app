@@ -3,7 +3,7 @@ from .models import Room, CanvasState
 
 
 class RoomSerializer(serializers.ModelSerializer):
-    password = serializers.CharField(write_only=True, required=False)
+    password = serializers.CharField(write_only=True, required=False, allow_blank=True)
 
     class Meta:
         model = Room

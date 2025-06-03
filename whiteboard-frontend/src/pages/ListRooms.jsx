@@ -5,11 +5,10 @@ import {
     Paper, Grid, Button, Typography, Dialog,
     DialogTitle, DialogContent, TextField, DialogActions, Alert,
 } from "@mui/material";
-import PublicIcon from '@mui/icons-material/Public';
-import PublicOffIcon from '@mui/icons-material/PublicOff';
 import RoomCard from "../components/RoomCard";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
+import TopBar from "../components/TopBar";
 
 
 export default function ListRooms() {
@@ -73,6 +72,7 @@ export default function ListRooms() {
 
     return (
         <>
+            <TopBar />
             <Paper sx={{ p: 2, mt: 4 }}>
                 <Typography variant="h6" gutterBottom>
                     All Rooms

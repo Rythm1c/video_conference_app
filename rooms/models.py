@@ -16,13 +16,13 @@ class Room(models.Model):
     name = models.CharField(max_length=100)
     created_by = models.ForeignKey(User, on_delete=models.CASCADE)
     is_private = models.BooleanField(default=False)
-    password = models.CharField(max_length=64, blank=True)
+    password = models.CharField(max_length=64, blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
     def save(self, *args, **kwargs):
         if self.is_private and not self.password:
             self.password = generate_password()
-        if not self.is_private:
+        else:
             self.password = ""  # clear any leftover value
         super().save(*args, **kwargs)
 

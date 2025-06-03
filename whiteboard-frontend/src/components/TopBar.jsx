@@ -50,16 +50,16 @@ function TopBar() {
                             <Typography variant="body1">
                                 {user?.username}
                             </Typography>
-                            <Avatar alt={user?.username} src="" />
+                            <Button onClick={handleMenuOpen}>
+                                <Avatar alt={user?.username} src="" />
+                            </Button>
 
-                            <IconButton onClick={handleMenuOpen} color="inherit">
-                                <ArrowDropDownIcon />
-                            </IconButton>
                             <Menu
                                 anchorEl={anchorEl}
                                 open={open}
                                 onClose={handleMenuClose}
                                 sx={{ '& .MuiMenu-list': { display: 'flex', flexDirection: 'column', alignItems: 'center' } }}>
+
                                 <MenuItem onClick={toggleTheme}>
                                     <IconButton color="inherit" >
                                         {mode === "light" ? <DarkModeIcon /> : <LightModeIcon />}

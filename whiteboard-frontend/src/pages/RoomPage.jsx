@@ -9,10 +9,20 @@ import ParticipantsPanel from "./ParticipantsPanel";
 import ChatPanel from "../components/ChatPanel";
 import RoomControls from "../components/RoomControls";
 
+// no canvas open
+const FirstLayout = ({ chatOpen }) => {
+    return (
+        <>
+            {chatOpen && <ChatPanel />}
+        </>
+    );
+}
+
 export default function RoomPage() {
     const { roomId } = useParams();
     const { user, token } = useContext(AuthContext);
-    const [chatOpen, setChatOpen] = useState(true);
+    const [chatOpen, setChatOpen] = useState(false);
+    const [canvasOpen, setCanvasOpen] = useState(false);
     const localStream = useRef(null);
 
     const [users, setUsers] = useState([]);
@@ -23,40 +33,47 @@ export default function RoomPage() {
     };
 
     return (
-        <Container disableGutters maxWidth="xxl" sx={{ height: "90vh", display: "flex", flexDirection: "column", padding: 2 }}>
+        <Container disableGutters maxWidth="xxl" sx={{ height: "100vh", display: "flex", flexDirection: "column", padding: 2 }}>
 
-            <Grid container sx={{ flexGrow: 1, overflow: "hidden" }}>
-                {/*  Canvas */}
-                <Grid size={{ xs: 12, md: 6 }}
-                    sx={{
-                        display: "flex",
-                        flexDirection: "column",
-                        height: "80%",
-                        p: 2,
-                    }}>
-                    <Box
+            {/*  <Grid container sx={{ flexGrow: 1, overflow: "hidden" }}>
+                
+                {
+                    canvasOpen && <Grid size={{ xs: 12, md: 6 }}
                         sx={{
-                            flexGrow: 1,
-                            position: "relative",
-                        }} >
+                            display: "flex",
+                            flexDirection: "column",
+                            height: "80%",
+                            p: 2,
+                        }}>
+                        <Box
+                            sx={{
+                                flexGrow: 1,
+                                position: "relative",
+                            }} >
 
-                        <CanvasWhiteboard
-                            roomId={roomId}
-                            username={user.username}
-                            token={token} />
-                    </Box>
-                </Grid>
-                {/*  Chat */}
-                {chatOpen && <Grid size={{ xs: 12, md: 3 }} sx={{ height: "100%", overflow: "auto" }} >
-                    <ChatPanel roomId={roomId} username={user.username} />
-                </Grid>}
-                {/*  UserList */}
+                            <CanvasWhiteboard
+                                roomId={roomId}
+                                username={user.username}
+                                token={token} />
+                        </Box>
+                    </Grid>
+                }
+              
+                {
+                    chatOpen && <Grid size={{ xs: 12, md: 3 }} sx={{ height: "100%", overflow: "auto", p: 2 }} >
+                        <ChatPanel roomId={roomId} username={user.username} />
+                    </Grid>
+                }
+              
                 <Grid size={{ xs: 12, md: 3 }} sx={{ height: "100%", overflow: "auto", p: 2 }}>
-                    <ParticipantsPanel roomId={roomId} username={user.username} localStream={localStream} />
+                    <ParticipantsPanel roomId={roomId} username={user.username} canvasOpen={canvasOpen} localStream={localStream} />
                 </Grid>
-            </Grid>
+            </Grid> */}
+
             <RoomControls
                 chatOpen={chatOpen}
+                canvasOpen={canvasOpen}
+                setCanvasOpen={setCanvasOpen}
                 setChatOpen={setChatOpen}
                 streamRef={localStream}
                 onLeave={() => {

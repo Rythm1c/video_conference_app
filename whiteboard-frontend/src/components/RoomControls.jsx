@@ -19,8 +19,10 @@ import MicOffIcon from "@mui/icons-material/MicOff";
 import VideocamIcon from "@mui/icons-material/Videocam";
 import VideocamOffIcon from "@mui/icons-material/VideocamOff";
 import ExitToAppIcon from "@mui/icons-material/ExitToApp";
+import CreateIcon from '@mui/icons-material/Create';
+import EditOffIcon from '@mui/icons-material/EditOff';
 
-export default function RoomControls({ streamRef, onLeave, chatOpen, setChatOpen }) {
+export default function RoomControls({ streamRef, canvasOpen, setCanvasOpen, onLeave, chatOpen, setChatOpen }) {
     const navigate = useNavigate();
     const [micOn, setMicOn] = useState(true);
     const [camOn, setCamOn] = useState(true);
@@ -49,22 +51,24 @@ export default function RoomControls({ streamRef, onLeave, chatOpen, setChatOpen
 
     return (
         <>
-            <Paper
+            <Box
                 sx={{
-                    position: "fixed",
-                    bottom: 0,
-                    left: 0,
-                    right: 0,
-                    py: 1,
-                    px: 2,
+                    width: "100%",
+                    py: 2,
+                    gap: 2,
                     bgcolor: "background.paper",
                     borderTop: "1px solid #ccc",
                     display: "flex",
                     justifyContent: "center",
                     zIndex: 10,
-                }}
+                }}>
 
-            >
+                <Tooltip title={canvasOpen ? "Hide Canvas" : "Show Canvas"}>
+                    <IconButton onClick={() => setCanvasOpen((prev) => !prev)}>
+                        {canvasOpen ? <CreateIcon /> : <EditOffIcon />}
+                    </IconButton>
+                </Tooltip>
+
                 <Box>
                     <Tooltip title={chatOpen ? "Hide Chat" : "Show Chat"}>
                         <IconButton onClick={() => setChatOpen((prev) => !prev)}>
@@ -89,7 +93,7 @@ export default function RoomControls({ streamRef, onLeave, chatOpen, setChatOpen
                         <ExitToAppIcon />
                     </IconButton>
                 </Tooltip>
-            </Paper>
+            </Box>
 
             <Dialog open={openConfirm} onClose={() => setOpenConfirm(false)}>
                 <DialogTitle>Leave Room</DialogTitle>

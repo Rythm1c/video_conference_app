@@ -39,8 +39,21 @@ export default function Register() {
                 display: "flex",
                 flexDirection: "column",
                 gap: 2,
-            }}
-        >
+            }} >
+            <Box
+                sx={{
+                    display: 'flex',
+                    justifyContent: 'center',
+                    mb: 2,
+                    borderRadius: 1,
+                    bgcolor: 'skyblue',
+                    padding: 1
+                }}
+                onHover={{ cursor: 'pointer' }}>
+                <Button variant="h4" onClick={() => navigate('/')} sx={{ fontWeight: 'bold' }}>
+                    Whiteboard
+                </Button>
+            </Box>
             <Typography variant="h5" align="center">
                 Register
             </Typography>

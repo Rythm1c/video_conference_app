@@ -37,9 +37,9 @@ const BackgroundBox = styled(Box)(({ theme }) => ({
 
 export default function App() {
   return (
-    <>
+    <Box sx={{ bgcolor: 'grey.900',  display: 'flex', flexDirection: 'column' }}>
       <TopBar />
-      <BackgroundBox>
+      <BackgroundBox sx={{ border: '1px solid #ccc', margin: 5 }}>
         <Container maxWidth="sm">
           <Typography variant="h2" gutterBottom>
             Welcome to Whiteboard
@@ -66,6 +66,6 @@ export default function App() {
           </Stack>
         </Container>
       </BackgroundBox>
-    </>
+    </Box>
   );
 }

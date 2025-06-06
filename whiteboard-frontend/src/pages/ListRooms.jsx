@@ -1,9 +1,10 @@
 // src/ListRooms.jsx
 import { useEffect, useState, useContext } from "react";
-import { AuthContext } from "./AuthContext";
+import { AuthContext } from "../contexts/AuthContext";
 import {
     Paper, Grid, Button, Typography, Dialog,
     DialogTitle, DialogContent, TextField, DialogActions, Alert,
+    Box,
 } from "@mui/material";
 import RoomCard from "../components/RoomCard";
 import axios from "axios";
@@ -18,6 +19,7 @@ export default function ListRooms() {
     const [selected, setSelected] = useState(null);
     const [password, setPassword] = useState("");
     const [error, setError] = useState("");
+    const [search, setSearch] = useState("");
     const navigate = useNavigate();
 
     useEffect(() => {
@@ -74,11 +76,25 @@ export default function ListRooms() {
         <div style={{ height: "100vh", }}>
             <TopBar />
             <Paper sx={{ p: 2, mt: 1, height: "100%", width: "100%" }}>
-                <Typography variant="h6" gutterBottom>
-                    All Rooms
+                <Typography variant="h5" style={{ fontWeight: "bold" }} gutterBottom>
+                    Rooms
                 </Typography>
+
+                <Box sx={{ mb: 2, display: "flex", justifyContent: "space-between" }}>
+                    <TextField
+                        label="Search Rooms"
+                        variant="outlined"
+                        fullWidth
+                        margin="normal"
+                        value={search}
+                        onChange={(e) => setSearch(e.target.value)}
+                        sx={{ mb: 2, borderRadius: 2 }}
+                    />
+                </Box>
+
+
                 <Grid container spacing={3}>
-                    {rooms.map((r) => (
+                    {rooms.filter((room) => room.name.toLowerCase().includes(search.toLowerCase())).map((r) => (
                         <Grid item xs={12} sm={6} md={3} key={r.id}>
                             <RoomCard room={r} handleJoinClick={handleJoinClick} />
                         </Grid>

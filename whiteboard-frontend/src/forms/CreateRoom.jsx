@@ -1,6 +1,6 @@
 // src/CreateRoom.jsx
 import { useState, useContext } from "react";
-import { AuthContext } from "../pages/AuthContext";
+import { AuthContext } from "../contexts/AuthContext";
 import {
     Box, Button, TextField, Typography, Switch, FormControlLabel, Alert,
 } from "@mui/material";
@@ -76,8 +76,7 @@ export default function CreateRoom() {
                     <Box mt={1}>
                         <Button
                             variant="outlined"
-                            onClick={() => navigate(`/room/${ackPassword ? name : ""}`)}
-                        >
+                            onClick={() => navigate(`/room/${ackPassword ? name : ""}`)} >
                             Go to Room
                         </Button>
                     </Box>

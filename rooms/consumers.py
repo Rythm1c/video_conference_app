@@ -41,62 +41,154 @@ class RoomConsumer(AsyncWebsocketConsumer):
             )
 
     async def receive(self, text_data):
-        data = json.loads(text_data)
-        msg_type = data.get("type")
+        try:
+            # Ensure data is properly parsed as JSON
+            print(f"Received data: {text_data}")
 
-        if msg_type == "join":
-            # Record this socket's username
-            self.username = data["username"]
-            users = ROOM_USERS.setdefault(self.room_code, set())
-            users.add(self.username)
+            # Try to parse JSON
+            try:
+                data = json.loads(text_data)
+            except json.JSONDecodeError:
+                print(f"Invalid JSON received: {text_data}")
+                await self.send(
+                    text_data=json.dumps(
+                        {
+                            "type": "error",
+                            "message": "Invalid JSON format. Expected a JSON object.",
+                        }
+                    )
+                )
+                return
 
-            if len(users) == 2:
+            if not isinstance(data, dict):
+                print(f"Invalid data type received: {type(data)}")
+                await self.send(
+                    text_data=json.dumps(
+                        {
+                            "type": "error",
+                            "message": f"Expected JSON object, got {type(data)}",
+                        }
+                    )
+                )
+                return
+
+            msg_type = data.get("type")
+            if not msg_type:
+                await self.send(
+                    text_data=json.dumps(
+                        {"type": "error", "message": "Message type is required"}
+                    )
+                )
+                return
+
+            # Handle different message types
+            if msg_type == "join":
+                if "username" not in data:
+                    await self.send(
+                        text_data=json.dumps(
+                            {
+                                "type": "error",
+                                "message": "Username is required for join",
+                            }
+                        )
+                    )
+                    return
+                self.username = data["username"]
+                users = ROOM_USERS.setdefault(self.room_code, set())
+                users.add(self.username)
                 await self.channel_layer.group_send(
-                    self.group_name, {"type": "start_call_event"}
+                    self.group_name,
+                    {
+                        "type": "user_list",
+                        "users": list(users),
+                    },
                 )
 
-            # Broadcast the full updated user list
-            await self.channel_layer.group_send(
-                self.group_name,
-                {
-                    "type": "user_list",
-                    "users": list(users),
-                },
-            )
+                # ... rest of join handling ...
 
-        if msg_type == "draw":
-            # Broadcast drawing events to the room
-            await self.channel_layer.group_send(
-                self.group_name,
-                {
-                    "type": "draw_line_event",
-                    "from": data["from"],
-                    "to": data["to"],
-                    "color": data.get("color", "#000000"),
-                    "size": data.get("size", 4),
-                },
-            )
-        if msg_type == "chat":
-            # broadcast chat message
-            await self.channel_layer.group_send(
-                self.group_name,
-                {
-                    "type": "chat_message",
-                    "username": data["username"],
-                    "text": data["text"],
-                },
-            )
+            if msg_type == "draw":
 
-        if msg_type in ("webrtc_offer", "webrtc_answer", "webrtc_candidate"):
-            # Relay WebRTC signaling messages
-            await self.channel_layer.group_send(
-                self.group_name,
-                {
-                    "type": "webrtc_signal",
-                    "signal_type": msg_type,
-                    "payload": data.get("payload"),
-                    "sender": data.get("sender"),
-                },
+                required_fields = ["from", "to"]
+                if not all(field in data for field in required_fields):
+                    await self.send(
+                        text_data=json.dumps(
+                            {
+                                "type": "error",
+                                "message": f"Missing required fields for draw: {required_fields}",
+                            }
+                        )
+                    )
+                    return
+
+                await self.channel_layer.group_send(
+                    self.group_name,
+                    {
+                        "type": "draw_line_event",
+                        "from": data["from"],
+                        "to": data["to"],
+                        "color": data.get("color", "#000000"),
+                        "size": data.get("size", 4),
+                    },
+                )
+
+            if msg_type == "chat":
+                if "text" not in data or "username" not in data:
+                    await self.send(
+                        text_data=json.dumps(
+                            {
+                                "type": "error",
+                                "message": "Chat messages require text and username",
+                            }
+                        )
+                    )
+                    return
+
+                await self.channel_layer.group_send(
+                    self.group_name,
+                    {
+                        "type": "chat_message",
+                        "username": data["username"],
+                        "text": data["text"],
+                    },
+                )
+
+            if msg_type in ("webrtc_offer", "webrtc_answer", "webrtc_candidate"):
+                if "payload" not in data or "sender" not in data:
+                    await self.send(
+                        text_data=json.dumps(
+                            {
+                                "type": "error",
+                                "message": f"Missing required fields for {msg_type}",
+                            }
+                        )
+                    )
+                    return
+
+                await self.channel_layer.group_send(
+                    self.group_name,
+                    {
+                        "type": "webrtc_signal",
+                        "signal_type": msg_type,
+                        "payload": data["payload"],
+                        "sender": data["sender"],
+                    },
+                )
+
+        except json.JSONDecodeError:
+            await self.send(
+                text_data=json.dumps(
+                    {"type": "error", "message": "Invalid JSON format"}
+                )
+            )
+        except Exception as e:
+            import traceback
+
+            print(f"Error in consumer: {str(e)}")
+            print(traceback.format_exc())
+            await self.send(
+                text_data=json.dumps(
+                    {"type": "error", "message": f"Server error: {str(e)}"}
+                )
             )
 
     # Handlers for messages broadcast on the group:
@@ -116,6 +208,7 @@ class RoomConsumer(AsyncWebsocketConsumer):
         await self.send(text_data=json.dumps({"type": "start_call"}))
 
     async def draw_line_event(self, event):
+        print("Broadcasting draw event:", event)
         await self.send(
             text_data=json.dumps(
                 {

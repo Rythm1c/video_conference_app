@@ -1,7 +1,7 @@
 import React from 'react';
 import { useContext } from "react";
-import { ThemeContext } from "./themeCtx";
-import { AuthContext } from "../pages/AuthContext";
+import { ThemeContext } from "../contexts/themeCtx";
+import { AuthContext } from "../contexts/AuthContext";
 
 import {
     AppBar,
@@ -41,7 +41,7 @@ function TopBar() {
     return (
         <AppBar position="static">
             <Toolbar sx={{ display: 'flex', justifyContent: 'space-between' }}>
-                <Typography variant="h6">Whiteboard</Typography>
+                <Button variant="h6" onClick={() => navigate("/")}>Whiteboard</Button>
 
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
 

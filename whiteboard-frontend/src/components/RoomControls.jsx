@@ -60,6 +60,7 @@ export default function RoomControls({ streamRef, canvasOpen, setCanvasOpen, onL
                     borderTop: "1px solid #ccc",
                     display: "flex",
                     justifyContent: "center",
+                    backgroundColor: 'grey.800',
                     zIndex: 10,
                 }}>
 

@@ -1,5 +1,5 @@
 // src/ChatPanel.jsx
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useContext } from "react";
 import {
     Paper,
     List,
@@ -14,6 +14,7 @@ import {
     Alert,
 } from "@mui/material";
 import ChatIcon from "@mui/icons-material/Chat";
+import { RoomConnectionContext } from "../contexts/roomConnection";
 
 export default function ChatPanel({ roomId, username }) {
     const [messages, setMessages] = useState([]);
@@ -21,7 +22,7 @@ export default function ChatPanel({ roomId, username }) {
     const [unread, setUnread] = useState(0);
     const [windowFocused, setWindowFocused] = useState(true);
     const [snackbarOpen, setSnackbarOpen] = useState(false);
-    const ws = useRef(null);
+    const { subscribe, sendMessage, connected } = useContext(RoomConnectionContext);
     const bottomRef = useRef();
 
     // Track window focus/blur to manage unread count
@@ -38,12 +39,9 @@ export default function ChatPanel({ roomId, username }) {
 
     // WebSocket setup
     useEffect(() => {
-        ws.current = new WebSocket(`ws://localhost:8000/ws/room/${roomId}/`);
-        ws.current.onopen = () => {
-            ws.current.send(JSON.stringify({ type: "join", username }));
-        };
-        ws.current.onmessage = ({ data }) => {
-            const msg = JSON.parse(data);
+        if (!connected) return;
+
+        const handle = (msg) => {
             if (msg.type === "chat") {
                 setMessages((m) => [...m, { user: msg.username, text: msg.text }]);
                 if (!windowFocused) {
@@ -52,8 +50,10 @@ export default function ChatPanel({ roomId, username }) {
                 }
             }
         };
-        return () => ws.current.close();
-    }, [roomId, username, windowFocused]);
+
+        const unsubscribe = subscribe(handle);
+        return unsubscribe;
+    }, [roomId, username, connected, subscribe, windowFocused]);
 
     // Auto-scroll on new message
     useEffect(() => {
@@ -62,12 +62,16 @@ export default function ChatPanel({ roomId, username }) {
 
     const sendChat = () => {
         if (!draft.trim()) return;
-        ws.current.send(
-            JSON.stringify({
+        if (!connected) {
+            alert('Not connected to chat server');
+            return;
+        }
+        sendMessage(
+            {
                 type: "chat",
                 username,
                 text: draft.trim(),
-            })
+            }
         );
         setDraft("");
     };
@@ -82,7 +86,7 @@ export default function ChatPanel({ roomId, username }) {
     }, [windowFocused]);
 
     return (
-        <Box sx={{ p: 1, height: "100%", display: "flex", flexDirection: "column", border: "1px solid #ccc" }}>
+        <Box sx={{ p: 1, height: "100%", display: "flex", flexDirection: "column", border: "1px solid #ccc", minWidth: "20%" }}>
             <Box sx={{ display: "flex", alignItems: "center", mb: 1 }}>
                 <Badge badgeContent={unread} color="error">
                     <ChatIcon />
@@ -113,7 +117,7 @@ export default function ChatPanel({ roomId, username }) {
                     onKeyDown={(e) => e.key === "Enter" && sendChat()}
                 />
                 <Button variant="contained" onClick={sendChat}>
-                    Send
+                    {connected ? 'Send' : 'Connecting...'}
                 </Button>
             </Box>
 

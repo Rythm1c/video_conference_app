@@ -5,7 +5,7 @@ import CssBaseline from "@mui/material/CssBaseline";
 export const ThemeContext = createContext();
 
 export default function ThemeManager({ children }) {
-    const [mode, setMode] = useState("light");
+    const [mode, setMode] = useState("dark");
 
     const toggleTheme = () => setMode((m) => (m === "light" ? "dark" : "light"));
 

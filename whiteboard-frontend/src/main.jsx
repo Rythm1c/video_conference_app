@@ -3,12 +3,12 @@ import ReactDOM from "react-dom/client";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import App from "./App.jsx";
 import RoomPage from "./pages/RoomPage.jsx";
-import { AuthProvider, AuthContext } from "./pages/AuthContext.jsx";
+import { AuthProvider, AuthContext } from "./contexts/AuthContext.jsx";
 import Login from "./pages/login.jsx";
 import Register from "./pages/register.jsx";
 import ListRooms from "./pages/ListRooms.jsx";
 import CreateRoom from "./forms/CreateRoom.jsx";
-import ThemeManager from "./components/themeCtx.jsx";
+import ThemeManager from "./contexts/themeCtx.jsx";
 import "./index.css";
 
 function RequireAuth({ children }) {

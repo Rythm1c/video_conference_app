@@ -2,36 +2,33 @@ import React from 'react'
 import { CardContent, Typography, Box } from "@mui/material";
 
 function VideoCard({ username, user, stream }) {
+    const videoRef = React.useRef(null);
+
+    React.useEffect(() => {
+        const videoElement = videoRef.current;
+        if (videoElement && stream) {
+            videoElement.srcObject = stream;
+            videoElement.play().catch(e =>
+                console.error("Failed to play video:", e)
+            );
+        }
+
+        return () => {
+            if (videoElement) {
+                videoElement.srcObject = null;
+            }
+        };
+    }, [stream]);
+
     return (
         <Box
-            sx={{ position: "relative", borderRadius: 1, overflow: "hidden", height: "100%" }}>
-            {/* <CardHeader
-                avatar={<Avatar>{u[0].toUpperCase()}</Avatar>}
-                title={
-                    <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-                        {u === username ? `${u} (You)` : u}
-                        {!status[u]?.mic && (
-                            <Tooltip title="Mic off">
-                                <MicOffIcon fontSize="small" color="disabled" />
-                            </Tooltip>
-                        )}
-                        {!status[u]?.cam && (
-                            <Tooltip title="Camera off">
-                                <VideocamOffIcon fontSize="small" color="disabled" />
-                            </Tooltip>
-                        )}
-                    </Box>
-                }
-            /> */}
+            sx={{ position: "relative", borderRadius: 0, overflow: "hidden", width: "100%", height: "100%" }}>
+
             {stream ? (
                 <video
                     autoPlay
                     muted={user === username}
-                    ref={(el) => {
-                        if (el && el.srcObject !== stream) {
-                            el.srcObject = stream;
-                        }
-                    }}
+                    ref={videoRef}
                     style={{
                         width: "100%",
                         height: "100%",

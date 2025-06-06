@@ -1,88 +1,106 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useContext } from "react";
 import {
-    Avatar,
     Box,
-    Card,
-    CardHeader,
-    CardContent,
-    Grid,
-    Paper,
     Typography,
-    Tooltip,
 } from "@mui/material";
 import MicOffIcon from "@mui/icons-material/MicOff";
 import VideocamOffIcon from "@mui/icons-material/VideocamOff";
 import VideoCard from "../components/VideoCard";
+import { RoomConnectionContext } from "../contexts/roomConnection";
 
-export default function ParticipantsPanel({ canvasOpen, roomId, username, localStream }) {
-    const ws = useRef(null);
-    const pcs = useRef(new Map());
-
-    const [users, setUsers] = useState([]);
+export default function ParticipantsPanel({ canvasOpen, users, setUsers, roomId, username, localStream }) {
+    const { subscribe, connected, sendMessage, pcs: pcsMap } = useContext(RoomConnectionContext);
+    const pcs = useRef(pcsMap); // Use the pcs from context
+    // const [users, setUsers] = useState([]);
+    const [readyPeers, setReadyPeers] = useState(new Set());
     const [streams, setStreams] = useState({});
     const [status, setStatus] = useState({}); // { username: { mic: bool, cam: bool } }
     const [userRows, setUserRows] = useState([]);
+
     const updateStream = (user, stream) =>
         setStreams((prev) => ({ ...prev, [user]: stream }));
 
     const updateStatus = (user, mic, cam) =>
         setStatus((prev) => ({ ...prev, [user]: { mic, cam } }));
 
-    useEffect(() => {
-        ws.current = new WebSocket(`ws://localhost:8000/ws/room/${roomId}/`);
+    const createPeerConnection = (peer) => {
+        const pc = new RTCPeerConnection({
+            iceServers: [{ urls: "stun:stun.l.google.com:19302" }],
+        });
 
-        ws.current.onopen = () => {
-            ws.current.send(JSON.stringify({ type: "join", username }));
+        if (localStream.current) {
+            console.log('Adding tracks to peer connection')
+            localStream.current.getTracks().forEach((track) => {
+                pc.addTrack(track, localStream.current);
+            });
+        }
+
+        pc.onicecandidate = (e) => {
+            if (e.candidate) {
+                sendMessage({
+                    type: "webrtc_candidate",
+                    sender: username,
+                    target: peer,
+                    payload: e.candidate,
+                });
+            }
         };
 
-        ws.current.onmessage = async (e) => {
-            const msg = JSON.parse(e.data);
+        pc.ontrack = (e) => {
+            console.log('Received remote track', e.streams[0]);
+            if (e.streams && e.streams[0]) {
+                updateStream(peer, e.streams[0]);
+            }
+        };
+
+        return pc;
+    };
+
+    useEffect(() => {
+        if (!connected) return;
+
+        const handle = async (msg) => {
             const { type, payload, sender, target } = msg;
-
-            if (type === "user_list") {
-                setUsers(msg.users);
-            }
-
-            if (type === "media_status" && sender !== username) {
-                setStatus((prev) => ({ ...prev, [sender]: payload }));
-            }
-
             if (sender === username) return;
 
-            if (type === "webrtc_offer") {
-                const pc = createPeerConnection(sender);
-                pcs.current.set(sender, pc);
-
-                await pc.setRemoteDescription(new RTCSessionDescription(payload));
-                const answer = await pc.createAnswer();
-                await pc.setLocalDescription(answer);
-                ws.current.send(
-                    JSON.stringify({
-                        type: "webrtc_answer",
-                        sender: username,
-                        target: sender,
-                        payload: answer,
-                    })
-                );
-            }
-
-            if (type === "webrtc_answer" && pcs.current.has(sender)) {
-                await pcs.current.get(sender).setRemoteDescription(
-                    new RTCSessionDescription(payload)
-                );
-            }
-
-            if (type === "webrtc_candidate" && pcs.current.has(sender)) {
-                try {
-                    await pcs.current.get(sender).addIceCandidate(
-                        new RTCIceCandidate(payload)
-                    );
-                } catch (err) {
-                    console.error("Failed to add ICE candidate", err);
-                }
+            switch (type) {
+                case "user_list":
+                    setUsers(msg.users);
+                    break;
+                case "media_status":
+                    setStatus((prev) => ({ ...prev, [sender]: payload }));
+                    break;
+                case "webrtc_offer":
+                    if (target !== username) return;
+                    const offerPc = createPeerConnection(sender);
+                    pcs.current.set(sender, offerPc);
+                    await offerPc.setRemoteDescription(new RTCSessionDescription(payload));
+                    const answer = await offerPc.createAnswer();
+                    await offerPc.setLocalDescription(answer);
+                    sendMessage({ type: "webrtc_answer", sender: username, target: sender, payload: answer });
+                    break;
+                case "webrtc_answer":
+                    if (target !== username || !pcs.current.has(sender)) return;
+                    await pcs.current.get(sender).setRemoteDescription(new RTCSessionDescription(payload));
+                    break;
+                case "webrtc_candidate":
+                    if (target !== username || !pcs.current.has(sender)) return;
+                    try {
+                        await pcs.current.get(sender).addIceCandidate(new RTCIceCandidate(payload));
+                    } catch (err) {
+                        console.error("Failed to add ICE candidate", err);
+                    }
+                    break;
+                default:
+                    break;
             }
         };
 
+        const unsubscribe = subscribe(handle);
+        return unsubscribe;
+    }, [connected, canvasOpen, username]);
+
+    useEffect(() => {
         navigator.mediaDevices
             .getUserMedia({ video: true, audio: true })
             .then((stream) => {
@@ -94,28 +112,43 @@ export default function ParticipantsPanel({ canvasOpen, roomId, username, localS
                 updateStatus(username, micOn, camOn);
 
                 // Broadcast local status
-                ws.current.send(
-                    JSON.stringify({
+                sendMessage(
+                    {
                         type: "media_status",
                         sender: username,
                         payload: { mic: micOn, cam: camOn },
-                    })
+                    }
                 );
             })
-            .catch(console.error);
+            .catch((error) => {
+                console.error('Failed to get media stream:', error);
+            });
 
         return () => {
-            ws.current?.close();
-            pcs.current.forEach((pc) => pc.close());
+            if (localStream.current) {
+                localStream.current
+                    .getTracks()
+                    .forEach(track =>
+                        track.stop());
+                localStream.current = null;
+            }
         };
-    }, [roomId, username]);
+    }, [localStream, canvasOpen, username]);
 
-    // Create peer connections as users join
     useEffect(() => {
         if (!localStream.current) return;
+        // Update local stream in streams object whenever layout changes
+        updateStream(username, localStream.current);
+    }, [canvasOpen, localStream.current, username]);
+
+    // Create peer connections as users joinvideo_conference_app
+    useEffect(() => {
+        if (!localStream.current) return;
+        if (!connected) return;
+        if (users.length === 0) return;
 
         users.forEach((peer) => {
-            if (peer === username || pcs.current.has(peer)) return;
+            if (peer === username || pcs.current.has(peer) || readyPeers.has(peer)) return;
 
             const pc = createPeerConnection(peer);
             pcs.current.set(peer, pc);
@@ -123,19 +156,25 @@ export default function ParticipantsPanel({ canvasOpen, roomId, username, localS
             pc.createOffer()
                 .then((offer) => {
                     pc.setLocalDescription(offer);
-                    ws.current.send(
-                        JSON.stringify({
+                    sendMessage(
+                        {
                             type: "webrtc_offer",
                             sender: username,
                             target: peer,
                             payload: offer,
-                        })
+                        }
                     );
+                    setReadyPeers((prev) => new Set(prev).add(peer));
                 })
                 .catch(console.error);
         });
 
-    }, [users, username]);
+        return () => {
+            pcs.current.forEach((pc) => pc.close());
+            pcs.current.clear();
+            setStreams({});
+        };
+    }, [users, username, canvasOpen, connected]);
 
     useEffect(() => {
         //if (canvasOpen) return;
@@ -147,42 +186,33 @@ export default function ParticipantsPanel({ canvasOpen, roomId, username, localS
         setUserRows(rows);
     }, [users, canvasOpen]);
 
-    const createPeerConnection = (peer) => {
-        const pc = new RTCPeerConnection({
-            iceServers: [{ urls: "stun:stun.l.google.com:19302" }],
-        });
 
-        localStream.current.getTracks().forEach((track) => {
-            pc.addTrack(track, localStream.current);
-        });
-
-        pc.onicecandidate = (e) => {
-            if (e.candidate) {
-                ws.current.send(
-                    JSON.stringify({
-                        type: "webrtc_candidate",
-                        sender: username,
-                        target: peer,
-                        payload: e.candidate,
-                    })
-                );
-            }
-        };
-
-        pc.ontrack = (e) => {
-            const [stream] = e.streams;
-            updateStream(peer, stream);
-        };
-
-        return pc;
-    };
 
     return (
         <>
             {canvasOpen ?
-                <Box sx={{ display: "flex", flexDirection: "row", gap: 2, overflowY: "auto", border: "1px solid #ccc", borderRadius: 0, padding: 1 }}>
-                    {users.map((u) => (
-                        <Box sx={{ position: "relative", borderRadius: 2, overflow: "hidden", minHeight: 200, width: 200 }}>
+                <Box
+                    sx={{
+                        height: "100%", width: "100%",
+                        display: "flex",
+                        flexDirection: "row",
+                        flexWrap: "wrap",
+                        gap: 2,
+                        overflowY: "auto",
+                        border: "1px solid #ccc",
+                        borderRadius: 0,
+                        padding: 1
+                    }}>
+                    {users.map((u, i) => (
+                        <Box
+                            key={i}
+                            sx={{
+                                position: "relative",
+                                borderRadius: 0,
+                                overflow: "hidden",
+                                width: 200, height: "100%", // 
+                                flexShrink: 0 // Prevent shrinking 
+                            }}>
                             <VideoCard
                                 stream={streams[u]}
                                 user={u}
@@ -191,11 +221,24 @@ export default function ParticipantsPanel({ canvasOpen, roomId, username, localS
                     ))}
                 </Box>
                 :
-                <Box sx={{ display: "flex", flexDirection: "column", width: "100%", border: "1px solid #ccc", borderRadius: 0, padding: 1 }}>
+                <Box
+                    sx={{
+                        display: "flex",
+                        flexDirection: "column",
+                        width: "100%", height: "100%",
+                        border: "1px solid #ccc",
+                        borderRadius: 0,
+                        padding: 1
+                    }}>
 
                     {
                         userRows.map((row, rowIndex) => (
-                            <Box key={rowIndex} sx={{ display: "flex", flexGrow: 1 }}>
+                            <Box
+                                key={rowIndex}
+                                sx={{
+                                    display: "flex",
+                                    flexGrow: 1,
+                                }}>
                                 {row.map((user) => (
                                     <Box
                                         key={user}

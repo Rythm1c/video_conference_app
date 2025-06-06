@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useContext } from "react";
 import {
   Box,
   Stack,
@@ -9,14 +9,21 @@ import {
   Paper,
   Divider,
 } from "@mui/material";
+import PaletteIcon from '@mui/icons-material/Palette';
 import UndoIcon from "@mui/icons-material/Undo";
 import RedoIcon from "@mui/icons-material/Redo";
 import SaveIcon from "@mui/icons-material/Save";
 import ClearIcon from "@mui/icons-material/Clear";
+import BrushIcon from '@mui/icons-material/Brush';
+import Tooltip from '@mui/material/Tooltip';
+import Popover from '@mui/material/Popover';
 
-export default function CanvasWhiteboard({ roomId, username, token }) {
+import { RoomConnectionContext } from "../contexts/roomConnection";
+
+export default function CanvasWhiteboard({ chatOpen, roomId, username, token }) {
   const canvasRef = useRef(null);
-  const ws = useRef(null);
+  const { sendMessage, subscribe, connected } = useContext(RoomConnectionContext);
+
   const [brushSize, setBrushSize] = useState(4);
   const [color, setColor] = useState("#000000");
 
@@ -26,29 +33,57 @@ export default function CanvasWhiteboard({ roomId, username, token }) {
 
   const lastPointRef = useRef(null);
 
+  const [anchorEl, setAnchorEl] = useState(null);
+
+  const handleBrushClick = (event) => {
+    setAnchorEl(event.currentTarget);
+  };
+
+  const handleBrushClose = () => {
+    setAnchorEl(null);
+  };
+
+  const open = Boolean(anchorEl);
+
   const resizeCanvas = () => {
     const canvas = canvasRef.current;
     if (!canvas) return;
+
     const parent = canvas.parentElement;
-    // Use devicePixelRatio to keep it crisp
     const dpr = window.devicePixelRatio || 1;
-    const width = parent.clientWidth;
-    const height = parent.clientHeight;
-    canvas.style.width = width + "px";
-    canvas.style.height = height + "px";
-    canvas.width = width * dpr;
-    canvas.height = height * dpr;
+
+    // Get actual container size
+    const displayWidth = parent.clientWidth;
+    const displayHeight = parent.clientHeight;
+
+    // Set canvas size taking pixel ratio into account
+    canvas.width = displayWidth * dpr;
+    canvas.height = displayHeight * dpr;
+
+    // Scale down the canvas CSS size
+    canvas.style.width = `${displayWidth}px`;
+    canvas.style.height = `${displayHeight}px`;
+
+    // Scale the drawing context
     const ctx = canvas.getContext("2d");
+    ctx.setTransform(1, 0, 0, 1, 0, 0);  // Reset transform
     ctx.scale(dpr, dpr);
+
+    // Redraw existing content after resize
+    redrawAll(undoStack);
   };
 
   useEffect(() => {
     // Initial size
     resizeCanvas();
+    const handleResize = () => {
+      // Add small delay to ensure container size has updated
+      setTimeout(resizeCanvas, 0);
+    };
     // Resize on window change
-    window.addEventListener("resize", resizeCanvas);
-    return () => window.removeEventListener("resize", resizeCanvas);
-  }, []);
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, [chatOpen, undoStack]);
 
 
   const drawLine = (ctx, from, to, color, size) => {
@@ -70,39 +105,39 @@ export default function CanvasWhiteboard({ roomId, username, token }) {
   };
 
   useEffect(() => {
+    if (!connected) return;
+
     const canvas = canvasRef.current;
     const ctx = canvas.getContext("2d");
 
+    // Load initial canvas state
     fetch(`http://localhost:8000/api/rooms/${roomId}/canvas/`, {
       headers: { Authorization: `Bearer ${token}` },
     })
       .then((res) => res.json())
       .then((data) => {
         const strokes = data.data || [];
-        for (let ev of strokes) {
-          drawLine(ctx, ev.from, ev.to, ev.color, ev.size);
-        }
         setEvents(strokes);
         setUndoStack(strokes);
+        redrawAll(strokes);
       });
 
-    ws.current = new WebSocket(`ws://localhost:8000/ws/room/${roomId}/`);
-
-    ws.current.onopen = () => {
-      ws.current.send(JSON.stringify({ type: "join", username }));
-    };
-
-    ws.current.onmessage = ({ data }) => {
-      const msg = JSON.parse(data);
-      if (msg.type === "draw") {
-        const ev = msg;
-        const ctx = canvas.getContext("2d");
-        drawLine(ctx, ev.from, ev.to, ev.color, ev.size);
-        setUndoStack((u) => [...u, ev]);
-        setEvents((e) => [...e, ev]);
+    // Handle incoming WebSocket messages
+    const handle = (msg) => {
+      if (msg.type === "draw" && msg.username !== username) {
+        const ctx = canvasRef.current.getContext("2d");
+        drawLine(ctx, msg.from, msg.to, msg.color, msg.size);
+        setUndoStack((u) => [...u, msg]);
+        setEvents((e) => [...e, msg]);
         setRedoStack([]);
       }
     };
+    const unsubscribe = subscribe(handle);
+    return unsubscribe;
+  }, [connected, roomId, token, username]);
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
 
     const getPos = (e) => {
       const rect = canvas.getBoundingClientRect();
@@ -125,19 +160,24 @@ export default function CanvasWhiteboard({ roomId, username, token }) {
       const newPoint = getPos(e);
       const ctx = canvas.getContext("2d");
 
-      const ev = {
+      const drawEvent = {
+        type: "draw",
         from: lastPointRef.current,
         to: newPoint,
         color,
         size: brushSize,
-        type: "draw",
-        username,
+        username, // Add username to identify who drew
       };
 
-      drawLine(ctx, ev.from, ev.to, ev.color, ev.size);
-      ws.current.send(JSON.stringify(ev));
-      setUndoStack((u) => [...u, ev]);
-      setEvents((e) => [...e, ev]);
+      // Draw locally
+      drawLine(ctx, drawEvent.from, drawEvent.to, drawEvent.color, drawEvent.size);
+
+      // Send to server
+      sendMessage(drawEvent);
+
+      // Update stacks
+      setUndoStack((u) => [...u, drawEvent]);
+      setEvents((e) => [...e, drawEvent]);
       setRedoStack([]);
 
       lastPointRef.current = newPoint;
@@ -153,9 +193,9 @@ export default function CanvasWhiteboard({ roomId, username, token }) {
       canvas.removeEventListener("mouseup", handleMouseUp);
       canvas.removeEventListener("mouseleave", handleMouseUp);
       canvas.removeEventListener("mousemove", handleMouseMove);
-      ws.current?.close();
+
     };
-  }, [roomId, username, token, brushSize, color]);
+  }, [username, brushSize, color]);
 
   const handleUndo = () => {
     const newUndo = [...undoStack];
@@ -179,8 +219,16 @@ export default function CanvasWhiteboard({ roomId, username, token }) {
   };
 
   const handleClear = () => {
-    const ctx = canvasRef.current.getContext("2d");
-    ctx.clearRect(0, 0, canvasRef.current.width, canvasRef.current.height);
+    const canvas = canvasRef.current;
+    const ctx = canvas.getContext("2d");
+    const dpr = window.devicePixelRatio || 1;
+
+    // Clear the entire canvas accounting for pixel ratio
+    ctx.save();
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.restore();
+
     setUndoStack([]);
     setRedoStack([]);
     setEvents([]);
@@ -203,36 +251,130 @@ export default function CanvasWhiteboard({ roomId, username, token }) {
   };
 
   return (
-    <Box sx={{ width: "100%", height: "100%", p: 1, border: "1px solid #ccc" }} >
-      <Stack direction="row" spacing={1} alignItems="center" mb={2}>
-        <Typography variant="subtitle1">Brush</Typography>
-        <Slider
-          value={brushSize}
-          onChange={(e, v) => setBrushSize(v)}
-          min={1}
-          max={20}
-          sx={{ width: 120 }}
-        />
-        <input type="color" value={color} onChange={(e) => setColor(e.target.value)} />
-        <Divider orientation="vertical" flexItem />
-        <IconButton onClick={handleUndo} disabled={!undoStack.length}>
-          <UndoIcon />
-        </IconButton>
-        <IconButton onClick={handleRedo} disabled={!redoStack.length}>
-          <RedoIcon />
-        </IconButton>
-        <IconButton onClick={handleClear}>
-          <ClearIcon />
-        </IconButton>
-        <IconButton onClick={handleSave}>
-          <SaveIcon />
-        </IconButton>
-      </Stack>
+    <Box sx={{
+      border: "1px solid #ccc",
+      flexGrow: 1,
+      p: 1,
+      display: "flex",
+      flexDirection: "row",
+      width: "100%",
+      height: "100%",
+      overflow: "hidden"
+    }} >
+      <Box sx={{ p: 0, borderRight: "1px solid #ccc" }}>
+        <Stack direction="column" spacing={1} alignItems="center" mb={2}>
+          <Tooltip title="Brush Size">
+            <IconButton onClick={handleBrushClick}>
+              <BrushIcon />
+            </IconButton>
+          </Tooltip>
 
-      <canvas
-        ref={canvasRef}
-        style={{ border: "1px solid #ccc", borderRadius: 1, display: "block" }} />
+          <Popover
+            open={open}
+            anchorEl={anchorEl}
+            onClose={handleBrushClose}
+            anchorOrigin={{
+              vertical: 'bottom',
+              horizontal: 'center',
+            }}
+            transformOrigin={{
+              vertical: 'top',
+              horizontal: 'center',
+            }}
+          >
+            <Box sx={{ p: 2, width: 120 }}>
+              <Typography variant="subtitle2" gutterBottom>
+                Brush Size: {brushSize}
+              </Typography>
+              <Slider
+                value={brushSize}
+                onChange={(e, v) => setBrushSize(v)}
+                min={1}
+                max={20}
+              />
+            </Box>
+          </Popover>
 
-    </Box>
+          <Tooltip title="Color">
+            <Box sx={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+              <input
+                type="color"
+                value={color}
+                onChange={(e) => setColor(e.target.value)}
+                style={{
+                  width: '0',
+                  height: '0',
+                  padding: '0',
+                  border: 'none',
+                  position: 'absolute',
+                  left: '50%',
+                  transform: 'translateX(-50%)',
+                  opacity: 0,
+                  cursor: 'pointer'
+                }}
+              />
+              <IconButton
+                sx={{
+                  color: color,
+                  '&:hover': {
+                    bgcolor: 'rgba(0, 0, 0, 0.04)'
+                  }
+                }}
+                onClick={() => document.querySelector('input[type="color"]').click()}
+              >
+                <PaletteIcon />
+              </IconButton>
+            </Box>
+          </Tooltip>
+
+          <Divider orientation="vertical" flexItem />
+          <Tooltip title="Undo">
+            <IconButton onClick={handleUndo} disabled={!undoStack.length}>
+              <UndoIcon />
+            </IconButton>
+          </Tooltip>
+
+          <Tooltip title="Redo">
+            <IconButton onClick={handleRedo} disabled={!redoStack.length}>
+              <RedoIcon />
+            </IconButton>
+          </Tooltip>
+
+          <Tooltip title="Clear Canvas">
+            <IconButton onClick={handleClear}>
+              <ClearIcon />
+            </IconButton>
+          </Tooltip>
+
+          <Tooltip title="Save Canvas">
+            <IconButton onClick={handleSave}>
+              <SaveIcon />
+            </IconButton>
+          </Tooltip>
+        </Stack>
+      </Box>
+
+
+      <Box
+        sx={{
+          p: 0,
+          width: "100%",
+          height: "100%",
+          position: "relative"
+        }}>
+        <canvas
+          ref={canvasRef}
+          style={{
+            border: "1px solid #ccc",
+            borderRadius: 1,
+            position: "absolute", // Position canvas absolutely
+            top: 0,
+            left: 0,
+            width: "100%",
+            height: "100%"
+          }} />
+      </Box>
+
+    </Box >
   );
 }

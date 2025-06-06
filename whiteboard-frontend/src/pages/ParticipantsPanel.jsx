@@ -11,7 +11,6 @@ import { RoomConnectionContext } from "../contexts/roomConnection";
 export default function ParticipantsPanel({ canvasOpen, users, setUsers, roomId, username, localStream }) {
     const { subscribe, connected, sendMessage, pcs: pcsMap } = useContext(RoomConnectionContext);
     const pcs = useRef(pcsMap); // Use the pcs from context
-    // const [users, setUsers] = useState([]);
     const [readyPeers, setReadyPeers] = useState(new Set());
     const [streams, setStreams] = useState({});
     const [status, setStatus] = useState({}); // { username: { mic: bool, cam: bool } }
@@ -193,12 +192,12 @@ export default function ParticipantsPanel({ canvasOpen, users, setUsers, roomId,
             {canvasOpen ?
                 <Box
                     sx={{
-                        height: "100%", width: "100%",
+                        height: "100%", width: "100vw",
                         display: "flex",
                         flexDirection: "row",
                         flexWrap: "wrap",
                         gap: 2,
-                        overflowY: "auto",
+                        overflowX: "auto",
                         border: "1px solid #ccc",
                         borderRadius: 0,
                         padding: 1

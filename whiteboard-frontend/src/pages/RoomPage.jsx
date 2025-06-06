@@ -12,7 +12,7 @@ import RoomControls from "../components/RoomControls";
 import RoomConnectionProvider from "../contexts/roomConnection";
 
 // no canvas open
-const FirstLayout = ({ chatOpen, canvasOpen, user, users, setUsers, localStream, roomId }) => {
+const FirstLayout = ({ chatOpen, canvasOpen, messages, setMessages, user, users, setUsers, localStream, roomId }) => {
     return (
         <Box sx={{
             gridColumn: '1 / 4', // Span all columns
@@ -46,6 +46,8 @@ const FirstLayout = ({ chatOpen, canvasOpen, user, users, setUsers, localStream,
                     }}>
                     <ChatPanel
                         roomId={roomId}
+                        messages={messages}
+                        setMessages={setMessages}
                         username={user.username} />
                 </Box>
             )}
@@ -54,7 +56,7 @@ const FirstLayout = ({ chatOpen, canvasOpen, user, users, setUsers, localStream,
     );
 }
 // canvas open
-const SecondLayout = ({ chatOpen, users, setUsers, token, canvasOpen, user, localStream, roomId }) => {
+const SecondLayout = ({ chatOpen, users, setUsers, messages, setMessages, token, canvasOpen, user, localStream, roomId }) => {
     return (
         <Box sx={{
             gridColumn: '1 / 4',
@@ -88,7 +90,11 @@ const SecondLayout = ({ chatOpen, users, setUsers, token, canvasOpen, user, loca
                             width: '20%',
                             minWidth: '250px'
                         }}>
-                        <ChatPanel roomId={roomId} username={user.username} />
+                        <ChatPanel
+                            roomId={roomId}
+                            messages={messages}
+                            setMessages={setMessages}
+                            username={user.username} />
                     </Box>
                 )}
             </Box>
@@ -120,6 +126,7 @@ export default function RoomPage() {
 
     const [users, setUsers] = useState([]);
     const [remoteStreams, setRemoteStreams] = useState({});
+    const [messages, setMessages] = useState([]);
 
     const handleRemoteStream = (peer, stream) => {
         setRemoteStreams((prev) => ({ ...prev, [peer]: stream }));
@@ -143,12 +150,16 @@ export default function RoomPage() {
                         canvasOpen={canvasOpen}
                         user={user}
                         users={users}
+                        messages={messages}
+                        setMessages={setMessages}
                         setUsers={setUsers}
                         token={token}
                         localStream={localStream}
                         roomId={roomId} />
                     :
                     <FirstLayout
+                        messages={messages}
+                        setMessages={setMessages}
                         chatOpen={chatOpen}
                         canvasOpen={canvasOpen}
                         user={user}
@@ -169,7 +180,6 @@ export default function RoomPage() {
                     }}>
 
                     <RoomControls
-
                         chatOpen={chatOpen}
                         canvasOpen={canvasOpen}
                         setCanvasOpen={setCanvasOpen}

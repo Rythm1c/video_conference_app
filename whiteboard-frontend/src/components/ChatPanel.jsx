@@ -16,8 +16,7 @@ import {
 import ChatIcon from "@mui/icons-material/Chat";
 import { RoomConnectionContext } from "../contexts/roomConnection";
 
-export default function ChatPanel({ roomId, username }) {
-    const [messages, setMessages] = useState([]);
+export default function ChatPanel({ messages, setMessages, roomId, username }) {
     const [draft, setDraft] = useState("");
     const [unread, setUnread] = useState(0);
     const [windowFocused, setWindowFocused] = useState(true);

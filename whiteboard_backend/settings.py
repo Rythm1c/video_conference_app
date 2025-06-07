@@ -148,7 +148,7 @@ REST_FRAMEWORK = {
 }
 
 # CORS: allow frontend dev server
-
+CORS_ALLOW_CREDENTIALS = True
 CORS_ALLOWED_ORIGINS = [os.getenv("FRONTEND_URL")]
 CSRF_TRUSTED_ORIGINS = [os.getenv("FRONTEND_URL")]
 

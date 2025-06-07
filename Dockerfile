@@ -16,9 +16,8 @@ RUN pip install --upgrade pip && pip install -r requirements.txt
 # Copy code
 COPY . .
 
-# Collect static (if you serve any)
-RUN python manage.py collectstatic --noinput
-
 EXPOSE 8000
 # Start Daphne for ASGI (handles HTTP + WS)
-CMD ["daphne", "-b", "0.0.0.0", "-p", "8000", "whiteboard_backend.asgi:application"]
+COPY entrypoint.sh /app/entrypoint.sh
+RUN chmod +x /app/entrypoint.sh
+CMD ["/app/entrypoint.sh"]

@@ -259,9 +259,10 @@ export default function CanvasWhiteboard({ chatOpen, roomId, username, token }) 
       flexDirection: "row",
       width: "100%",
       height: "100%",
-      overflow: "hidden"
+      overflow: "hidden",
+      gap: 1,
     }} >
-      <Box sx={{ p: 0, borderRight: "1px solid #ccc" }}>
+      <Box sx={{ p: 0, bgcolor: "grey.800" }}>
         <Stack direction="column" spacing={1} alignItems="center" mb={2}>
           <Tooltip title="Brush Size">
             <IconButton onClick={handleBrushClick}>
@@ -360,13 +361,14 @@ export default function CanvasWhiteboard({ chatOpen, roomId, username, token }) 
           p: 0,
           width: "100%",
           height: "100%",
-          position: "relative"
+          position: "relative",
+          border: "1px solid #ccc",
+          borderRadius: 1,
         }}>
         <canvas
           ref={canvasRef}
           style={{
-            border: "1px solid #ccc",
-            borderRadius: 1,
+
             position: "absolute", // Position canvas absolutely
             top: 0,
             left: 0,

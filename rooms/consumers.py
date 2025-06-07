@@ -171,6 +171,7 @@ class RoomConsumer(AsyncWebsocketConsumer):
                         "signal_type": msg_type,
                         "payload": data["payload"],
                         "sender": data["sender"],
+                        "target": data.get("target"),
                     },
                 )
 
@@ -234,12 +235,15 @@ class RoomConsumer(AsyncWebsocketConsumer):
 
     async def webrtc_signal(self, event):
         # Send WebRTC signaling data to the client
+        if event.get("target") != self.username:
+            return
         await self.send(
             text_data=json.dumps(
                 {
                     "type": event["signal_type"],
                     "payload": event["payload"],
                     "sender": event["sender"],
+                    "target": event["target"],
                 }
             )
         )

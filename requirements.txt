@@ -10,6 +10,7 @@ click==8.2.1
 constantly==23.10.4
 cryptography==45.0.2
 daphne==4.2.0
+dj-database-url==3.0.0
 Django==5.2.1
 django-cors-headers==4.7.0
 djangorestframework==3.16.0
@@ -23,6 +24,7 @@ mypy_extensions==1.1.0
 packaging==25.0
 pathspec==0.12.1
 platformdirs==4.3.8
+psycopg2-binary==2.9.10
 pyasn1==0.6.1
 pyasn1_modules==0.4.2
 pycparser==2.22

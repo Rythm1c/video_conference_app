@@ -57,6 +57,7 @@ MIDDLEWARE = [
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
     "corsheaders.middleware.CorsMiddleware",
     "django.middleware.security.SecurityMiddleware",
+    "whitenoise.middleware.WhiteNoiseMiddleware",  # get back to this later
 ]
 
 ROOT_URLCONF = "whiteboard_backend.urls"
@@ -64,7 +65,7 @@ ROOT_URLCONF = "whiteboard_backend.urls"
 TEMPLATES = [
     {
         "BACKEND": "django.template.backends.django.DjangoTemplates",
-        "DIRS": [os.path.join(BASE_DIR, "static/react")],
+        "DIRS": [],
         "APP_DIRS": True,
         "OPTIONS": {
             "context_processors": [
@@ -85,15 +86,15 @@ WSGI_APPLICATION = "whiteboard_backend.wsgi.application"
 import dj_database_url
 
 
-DATABASES = {
+""" DATABASES = {
     "default": {
         "ENGINE": "django.db.backends.sqlite3",
         "NAME": BASE_DIR / "db.sqlite3",
     }
 }
-
-""" DATABASES = {"default": dj_database_url.config(default=os.getenv("DATABASE_URL"))}
  """
+DATABASES = {"default": dj_database_url.config(default=os.getenv("DATABASE_URL"))}
+
 
 # Password validation
 # https://docs.djangoproject.com/en/5.2/ref/settings/#auth-password-validators
@@ -141,11 +142,14 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": (
         "rest_framework_simplejwt.authentication.JWTAuthentication",
-    )
+    ),
+    "DEFAULT_PERMISSION_CLASSES": ("rest_framework.permissions.IsAuthenticated",),
 }
 
 # CORS: allow frontend dev server
-CORS_ALLOW_ALL_ORIGINS = True  # replace with whitelist later
+
+CORS_ALLOWED_ORIGINS = [os.getenv("FRONTEND_URL")]
+CSRF_TRUSTED_ORIGINS = [os.getenv("FRONTEND_URL")]
 
 # Channels config
 ASGI_APPLICATION = "whiteboard_backend.asgi.application"
@@ -154,8 +158,8 @@ CHANNEL_LAYERS = {
         "BACKEND": "channels_redis.core.RedisChannelLayer",
         "CONFIG": {
             "hosts": [
-                "redis://localhost:6379"
-                # os.getenv("REDIS_URL", "redis://localhost:6379"),
+                # "redis://localhost:6379"
+                os.getenv("REDIS_URL"),
             ],
         },
     },
@@ -170,7 +174,4 @@ SIMPLE_JWT = {
     "ACCESS_TOKEN_LIFETIME": timedelta(hours=24),
     # If you’re using refresh tokens, also extend theirs:
     "REFRESH_TOKEN_LIFETIME": timedelta(days=7),
-    # (Optional) other SimpleJWT settings follow…
-    "ROTATE_REFRESH_TOKENS": False,
-    "BLACKLIST_AFTER_ROTATION": True,
 }

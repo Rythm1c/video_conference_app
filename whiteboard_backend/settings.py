@@ -50,6 +50,7 @@ INSTALLED_APPS = [
 ]
 
 MIDDLEWARE = [
+    "corsheaders.middleware.CorsMiddleware", 
     "django.middleware.security.SecurityMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
@@ -57,9 +58,8 @@ MIDDLEWARE = [
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
-    "corsheaders.middleware.CorsMiddleware",
-    "django.middleware.security.SecurityMiddleware",
 ]
+
 
 ROOT_URLCONF = "whiteboard_backend.urls"
 
@@ -86,14 +86,17 @@ WSGI_APPLICATION = "whiteboard_backend.wsgi.application"
 
 import dj_database_url
 
+AUTH_USER_MODEL = "users.CustomUser"
 
-""" DATABASES = {
+"""
+DATABASES = {
     "default": {
         "ENGINE": "django.db.backends.sqlite3",
         "NAME": BASE_DIR / "db.sqlite3",
     }
 }
- """
+"""
+
 DATABASES = {"default": dj_database_url.config(default=os.getenv("DATABASE_URL"))}
 
 
@@ -150,6 +153,7 @@ REST_FRAMEWORK = {
 CORS_ALLOW_CREDENTIALS = True
 CORS_ALLOWED_ORIGINS = [os.getenv("FRONTEND_URL")]
 CSRF_TRUSTED_ORIGINS = [os.getenv("FRONTEND_URL")]
+# CORS_ALLOW_ALL_ORIGINS = True
 
 # Channels config
 ASGI_APPLICATION = "whiteboard_backend.asgi.application"
@@ -158,7 +162,6 @@ CHANNEL_LAYERS = {
         "BACKEND": "channels_redis.core.RedisChannelLayer",
         "CONFIG": {
             "hosts": [
-                # "redis://localhost:6379"
                 os.getenv("REDIS_URL"),
             ],
         },

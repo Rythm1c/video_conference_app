@@ -1,7 +1,7 @@
 import uuid, secrets
 from django.db import models
 from django.contrib.auth.models import User
-
+from django.conf import settings
 
 def generate_room_code():
     return uuid.uuid4().hex[:10].upper()
@@ -14,7 +14,7 @@ def generate_password():
 class Room(models.Model):
     code = models.CharField(max_length=10, unique=True, default=generate_room_code)
     name = models.CharField(max_length=100)
-    created_by = models.ForeignKey(User, on_delete=models.CASCADE)
+    created_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
     is_private = models.BooleanField(default=False)
     password = models.CharField(max_length=64, blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)

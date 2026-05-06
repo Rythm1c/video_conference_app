@@ -22,7 +22,7 @@ class Room(models.Model):
     def save(self, *args, **kwargs):
         if self.is_private and not self.password:
             self.password = generate_password()
-        else:
+        elif not self.is_private:
             self.password = ""  # clear any leftover value
         super().save(*args, **kwargs)
 

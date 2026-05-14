@@ -50,10 +50,10 @@ INSTALLED_APPS = [
 ]
 
 MIDDLEWARE = [
-    "corsheaders.middleware.CorsMiddleware", 
+    "corsheaders.middleware.CorsMiddleware",
+    "django.middleware.common.CommonMiddleware",
     "django.middleware.security.SecurityMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
-    "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
@@ -91,9 +91,7 @@ AUTH_USER_MODEL = "users.CustomUser"
 if os.getenv("DATABASE_URL"):
     DATABASES = {
         "default": dj_database_url.config(
-            default=os.environ["DATABASE_URL"],
-            conn_max_age=600,
-            ssl_require=True
+            default=os.environ["DATABASE_URL"], conn_max_age=600, ssl_require=True
         )
     }
 else:
@@ -155,8 +153,8 @@ REST_FRAMEWORK = {
 
 # CORS: allow frontend dev server
 CORS_ALLOW_CREDENTIALS = True
-CORS_ALLOWED_ORIGINS = [os.getenv("FRONTEND_URL")]
-CSRF_TRUSTED_ORIGINS = [os.getenv("FRONTEND_URL")]
+CORS_ALLOWED_ORIGINS = os.getenv("FRONTEND_URL").split(",")
+CSRF_TRUSTED_ORIGINS = os.getenv("FRONTEND_URL").split(",")
 # CORS_ALLOW_ALL_ORIGINS = True
 
 # Channels config

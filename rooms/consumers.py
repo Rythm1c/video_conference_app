@@ -1,10 +1,8 @@
-# rooms/consumers.py
-
 import json
 from channels.generic.websocket import AsyncWebsocketConsumer
+from channels.db import database_sync_to_async
 
-# In-memory store of active usernames per room.
-# For production, consider using a shared store like Redis.
+#use redis instead of this
 ROOM_USERS: dict[str, set[str]] = {}
 
 
@@ -22,15 +20,19 @@ class RoomConsumer(AsyncWebsocketConsumer):
 
     async def disconnect(self, close_code):
         # Leave the channel layer group
-        await self.channel_layer.group_discard(self.group_name, self.channel_name)
+        await self.channel_layer.group_discard(
+            self.group_name,
+            self.channel_name,
+        )
 
-        # If the user had joined, remove them and broadcast the updated list
+        # Remove user from room if they had joined
         if self.username:
             users = ROOM_USERS.get(self.room_code, set())
             users.discard(self.username)
 
+            # Safely remove empty room
             if not users:
-                del ROOM_USERS[self.room_code]
+                ROOM_USERS.pop(self.room_code, None)
 
             await self.channel_layer.group_send(
                 self.group_name,
@@ -40,48 +42,66 @@ class RoomConsumer(AsyncWebsocketConsumer):
                 },
             )
 
+    @database_sync_to_async
+    def get_room_max_members(self, room_code):
+        from .models import Room
+
+        try:
+            return Room.objects.get(code=room_code).max_members
+        except Room.DoesNotExist:
+            return 0  # 0 = unlimited
+
     async def receive(self, text_data):
         try:
-            # Ensure data is properly parsed as JSON
             print(f"Received data: {text_data}")
 
-            # Try to parse JSON
+            # Parse JSON
             try:
                 data = json.loads(text_data)
             except json.JSONDecodeError:
-                print(f"Invalid JSON received: {text_data}")
                 await self.send(
                     text_data=json.dumps(
                         {
                             "type": "error",
-                            "message": "Invalid JSON format. Expected a JSON object.",
+                            "message": (
+                                "Invalid JSON format. "
+                                "Expected a JSON object."
+                            ),
                         }
                     )
                 )
                 return
 
+            # Ensure object/dict
             if not isinstance(data, dict):
-                print(f"Invalid data type received: {type(data)}")
                 await self.send(
                     text_data=json.dumps(
                         {
                             "type": "error",
-                            "message": f"Expected JSON object, got {type(data)}",
+                            "message": (
+                                f"Expected JSON object, got {type(data)}"
+                            ),
                         }
                     )
                 )
                 return
 
             msg_type = data.get("type")
+
             if not msg_type:
                 await self.send(
                     text_data=json.dumps(
-                        {"type": "error", "message": "Message type is required"}
+                        {
+                            "type": "error",
+                            "message": "Message type is required",
+                        }
                     )
                 )
                 return
 
-            # Handle different message types
+            # =========================================================
+            # JOIN
+            # =========================================================
             if msg_type == "join":
                 if "username" not in data:
                     await self.send(
@@ -93,9 +113,38 @@ class RoomConsumer(AsyncWebsocketConsumer):
                         )
                     )
                     return
+
                 self.username = data["username"]
-                users = ROOM_USERS.setdefault(self.room_code, set())
+
+                users = ROOM_USERS.setdefault(
+                    self.room_code,
+                    set(),
+                )
+
+                # Enforce member limit
+                max_members = await self.get_room_max_members(
+                    self.room_code
+                )
+
+                if max_members > 0 and len(users) >= max_members:
+                    await self.send(
+                        text_data=json.dumps(
+                            {
+                                "type": "error",
+                                "message": (
+                                    f"Room is full "
+                                    f"({max_members} member limit reached)."
+                                ),
+                                "code": "room_full",
+                            }
+                        )
+                    )
+
+                    await self.close()
+                    return
+
                 users.add(self.username)
+
                 await self.channel_layer.group_send(
                     self.group_name,
                     {
@@ -104,17 +153,21 @@ class RoomConsumer(AsyncWebsocketConsumer):
                     },
                 )
 
-                # ... rest of join handling ...
-
-            if msg_type == "draw":
-
+            # =========================================================
+            # DRAW
+            # =========================================================
+            elif msg_type == "draw":
                 required_fields = ["from", "to"]
+
                 if not all(field in data for field in required_fields):
                     await self.send(
                         text_data=json.dumps(
                             {
                                 "type": "error",
-                                "message": f"Missing required fields for draw: {required_fields}",
+                                "message": (
+                                    "Missing required fields for draw: "
+                                    f"{required_fields}"
+                                ),
                             }
                         )
                     )
@@ -131,13 +184,19 @@ class RoomConsumer(AsyncWebsocketConsumer):
                     },
                 )
 
-            if msg_type == "chat":
+            # =========================================================
+            # CHAT
+            # =========================================================
+            elif msg_type == "chat":
                 if "text" not in data or "username" not in data:
                     await self.send(
                         text_data=json.dumps(
                             {
                                 "type": "error",
-                                "message": "Chat messages require text and username",
+                                "message": (
+                                    "Chat messages require "
+                                    "text and username"
+                                ),
                             }
                         )
                     )
@@ -152,13 +211,23 @@ class RoomConsumer(AsyncWebsocketConsumer):
                     },
                 )
 
-            if msg_type in ("webrtc_offer", "webrtc_answer", "webrtc_candidate"):
+            # =========================================================
+            # WEBRTC SIGNALING
+            # =========================================================
+            elif msg_type in (
+                "webrtc_offer",
+                "webrtc_answer",
+                "webrtc_candidate",
+            ):
                 if "payload" not in data or "sender" not in data:
                     await self.send(
                         text_data=json.dumps(
                             {
                                 "type": "error",
-                                "message": f"Missing required fields for {msg_type}",
+                                "message": (
+                                    f"Missing required fields "
+                                    f"for {msg_type}"
+                                ),
                             }
                         )
                     )
@@ -175,27 +244,41 @@ class RoomConsumer(AsyncWebsocketConsumer):
                     },
                 )
 
-        except json.JSONDecodeError:
-            await self.send(
-                text_data=json.dumps(
-                    {"type": "error", "message": "Invalid JSON format"}
+            # =========================================================
+            # UNKNOWN MESSAGE TYPE
+            # =========================================================
+            else:
+                await self.send(
+                    text_data=json.dumps(
+                        {
+                            "type": "error",
+                            "message": (
+                                f"Unknown message type: {msg_type}"
+                            ),
+                        }
+                    )
                 )
-            )
+
         except Exception as e:
             import traceback
 
             print(f"Error in consumer: {str(e)}")
             print(traceback.format_exc())
+
             await self.send(
                 text_data=json.dumps(
-                    {"type": "error", "message": f"Server error: {str(e)}"}
+                    {
+                        "type": "error",
+                        "message": f"Server error: {str(e)}",
+                    }
                 )
             )
 
-    # Handlers for messages broadcast on the group:
+    # =============================================================
+    # GROUP EVENT HANDLERS
+    # =============================================================
 
     async def user_list(self, event):
-        # Send the updated user list to the client
         await self.send(
             text_data=json.dumps(
                 {
@@ -206,10 +289,17 @@ class RoomConsumer(AsyncWebsocketConsumer):
         )
 
     async def start_call_event(self, event):
-        await self.send(text_data=json.dumps({"type": "start_call"}))
+        await self.send(
+            text_data=json.dumps(
+                {
+                    "type": "start_call",
+                }
+            )
+        )
 
     async def draw_line_event(self, event):
         print("Broadcasting draw event:", event)
+
         await self.send(
             text_data=json.dumps(
                 {
@@ -234,16 +324,25 @@ class RoomConsumer(AsyncWebsocketConsumer):
         )
 
     async def webrtc_signal(self, event):
-        # Send WebRTC signaling data to the client
-        if event.get("target") != self.username:
+        """
+        Send WebRTC signaling data to the intended client.
+
+        If target is None, broadcast to everyone.
+        """
+
+        target = event.get("target")
+
+        # If targeted and not meant for this user -> ignore
+        if target and target != self.username:
             return
+
         await self.send(
             text_data=json.dumps(
                 {
                     "type": event["signal_type"],
                     "payload": event["payload"],
                     "sender": event["sender"],
-                    "target": event["target"],
+                    "target": target,
                 }
             )
         )

@@ -3,6 +3,7 @@ from django.db import models
 from django.contrib.auth.models import User
 from django.conf import settings
 
+
 def generate_room_code():
     return uuid.uuid4().hex[:10].upper()
 
@@ -17,6 +18,7 @@ class Room(models.Model):
     created_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
     is_private = models.BooleanField(default=False)
     password = models.CharField(max_length=64, blank=True, null=True)
+    max_members = models.PositiveIntegerField(default=10)
     created_at = models.DateTimeField(auto_now_add=True)
 
     def save(self, *args, **kwargs):
